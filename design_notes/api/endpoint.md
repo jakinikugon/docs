@@ -11,15 +11,15 @@
 ## Buyers（個人アカウント）
 
 - `/api/buyers/me`(`GET`, `PATCH`, `DELETE`): 購入者アカウント情報の取得・更新・削除
-- `/api/buyers/me/rescues`(`GET`, `POST`): 報告した購入履歴、購入報告
+- `/api/buyers/me/reports`(`GET`, `POST`): 報告した購入履歴、購入報告
 - `/api/buyers/me/pantry`(`GET`, `POST`, `DELETE`): 冷蔵庫アイテムの取得・追加・削除
-- `/api/buyers/me/chat/message`(`GET`, `POST`): チャットの取得・ポスト
+- `/api/buyers/me/chat/messages`(`GET`, `POST`): チャットの取得・ポスト
 - `/api/buyers/me/chat/recipes`(`GET`): チャットで提案されたレシピの取得
 
 ## Stores（店舗アカウント）
 
 - `/api/stores/me`(`GET`, `PATCH`, `DELETE`): 店舗アカウント情報の取得・更新・削除
-- `/api/stores/me/rescues`(`GET`): 自店舗の報告された購入履歴
+- `/api/stores/me/reports`(`GET`): 自店舗の報告された購入履歴
 - `/api/stores/me/items`(`GET`, `POST`): 自店舗の出品一覧・作成
 - `/api/stores/me/items/{item_id}`(`GET`, `PATCH`, `DELETE`): 出品の詳細取得・更新・削除
 - `/api/stores/{store_id}`(`GET`): 公開プロフィール
