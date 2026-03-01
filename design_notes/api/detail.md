@@ -12,16 +12,18 @@
 type UUID = string; // UUID v4形式の文字列
 type Timestamp = string; // ISO 8601形式の日時文字列
 type JanCode = string; // JANコードの文字列
+type URL = string; // URLの文字列
 
 // ドメイン固有の型定義
 
 type UserId = UUID;
 type ItemId = UUID;
+type ImageId = UUID;
 
 type Item = {
   id: ItemId;
   name: string;
-  imageUrl: string;
+  imageUrl: URL;
   price: number;
 };
 
@@ -96,7 +98,8 @@ type PantryItem = {
 };
 
 // チャットメッセージ（ChatMessage）に関する型定義
-type Role = "system" | "user";
+type Role = "system" | "assistant" | "user"; // systemはいらない？
+
 type Recipe = {
   title: string;
   description: string;
@@ -107,7 +110,7 @@ type Recipe = {
 type ChatMessage = {
   role: Role;
   content: string;
-  recipes: Recipe[] | null; // roleが"user"のときはnull、"system"のときはレシピ提案が入る想定
+  recipes: Recipe[] | null; // roleが "user" | "system" のときはnull、"system"のときはレシピ提案が入る想定
 };
 
 type Recipes = Recipe[];
@@ -321,7 +324,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 []
 ```
 
-#### GET `/api/buyers/me/chat/message`
+#### GET `/api/buyers/me/chat/messages`
 
 - チャットの取得
 - レスポンスは`ChatMessage`型の配列
@@ -334,7 +337,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
     "recipes": null
   },
   {
-    "role": "system",
+    "role": "assistant",
     "content": "牛乳と卵があるんですね。オムレツはいかがでしょうか？",
     "recipes": [
       {
@@ -666,6 +669,34 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 ```json
 [
-    ["牛乳", "牛肉", "牛すじ", ...],
-]
+    "牛乳",
+    "牛肉",
+    "牛すじ",
+    ...
+],
 ```
+
+### 画像アップロード用
+
+#### POST `/api/upload/image`
+
+- 画像のアップロード
+- リクエストはmultipart/form-dataで画像ファイルを送信
+- レスポンスはアップロードされた画像のURL
+
+```json
+{
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "imageUrl": "https://example.com/image/123e4567-e89b-12d3-a456-426614174000.png"
+}
+```
+
+### GET `/api/upload/image/{image_id}`
+
+- 画像の取得
+- レスポンスは画像ファイル
+
+### DELETE `/api/upload/image/{image_id}`
+
+- 画像の削除
+- レスポンスは空
