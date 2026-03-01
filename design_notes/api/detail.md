@@ -185,7 +185,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
     "allergies": ["egg", "milk"],
     "prompt": "私は料理が苦手です。簡単なレシピを教えてください。"
   },
-  "report": {
+  "reports": {
     "totalCount": 10,
     "totalDiscount": 5000
   }
@@ -350,7 +350,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 ]
 ```
 
-#### POST `/api/buyers/me/chat/message`
+#### POST `/api/buyers/me/chat/messages`
 
 - チャットのポスト
 - リクエストボディは以下のような形式
@@ -385,6 +385,26 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 ]
 ```
 
+#### GET `/api/buyers/me/chat/recipes`
+
+- チャットで提案されたレシピの取得
+- レスポンスは`Recipes`型
+- 画像URLや不足食材の情報などは未定
+
+```json
+[
+  {
+    "title": "簡単オムレツ",
+    "description": "牛乳と卵を使った簡単なオムレツのレシピです。",
+    "materials": ["卵 2個", "牛乳 大さじ2", "塩 少々", "こしょう 少々"]
+  },
+  {
+    "title": "フレンチトースト",
+    "description": "牛乳と卵を使って手軽に作れるフレンチトーストです。",
+    "materials": ["食パン 2枚", "卵 1個", "牛乳 100ml", "砂糖 大さじ1", "バター 少々"]
+  }
+]
+
 ### Stores（店舗アカウント）
 
 #### GET `/api/stores/me`
@@ -401,7 +421,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
     "storeIconUrl": "https://example.com/icon.png",
     "storeIntroduction": "新鮮な食材をお届けします！"
   },
-  "report": {
+  "reports": {
     "totalCount": 100
   }
 }
