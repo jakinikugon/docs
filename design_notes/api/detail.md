@@ -30,7 +30,7 @@ type Item = {
 // 購入者（Buyer）に関する型定義
 type BuyerName = string;
 
-type Allergy =
+type Allergen =
   // 特定原材料（表示義務：8品目）
   | "egg" // 卵
   | "milk" // 乳
@@ -65,7 +65,7 @@ type Allergy =
 
 type BuyerSetting = {
   buyerName: BuyerName;
-  allergies: Allergy[];
+  allergens: Allergen[];
   prompt: string;
 };
 
@@ -182,7 +182,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "setting": {
     "buyerName": "山田太郎",
-    "allergies": ["egg", "milk"],
+    "allergens": ["egg", "milk"],
     "prompt": "私は料理が苦手です。簡単なレシピを教えてください。"
   },
   "reports": {
@@ -200,7 +200,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 ```json
 {
   "buyerName": "山田太郎",
-  "allergies": ["egg", "milk", "peanut"],
+  "allergens": ["egg", "milk", "peanut"],
   "prompt": "私は料理が苦手です。簡単なレシピを教えてください。"
 }
 ```
@@ -711,12 +711,12 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 }
 ```
 
-### GET `/api/upload/image/{image_id}`
+#### GET `/api/upload/image/{image_id}`
 
 - 画像の取得
 - レスポンスは画像ファイル
 
-### DELETE `/api/upload/image/{image_id}`
+#### DELETE `/api/upload/image/{image_id}`
 
 - 画像の削除
 - レスポンスは空
