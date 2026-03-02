@@ -469,7 +469,6 @@ type BuyersMePantryPostResponse = Pantry;
 #### DELETE `/api/buyers/me/pantry/{pantry_item_id}`
 
 - 冷蔵庫アイテムの削除
-- `all`が`true`の場合は全削除、それ以外は`items`に指定されたIDのアイテムを削除
 - レスポンスは削除後の冷蔵庫情報
 - 関数名：DeleteBuyersPantry
 
