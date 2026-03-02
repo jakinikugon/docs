@@ -3,16 +3,19 @@
 ## Note
 
 - 認証認可に関しては未定
-- とりあえず出品・冷蔵庫アイテム追加はJANコードを指定する形式のみ想定（将来的には手打ちも可能にしたい）
+- APIの型名の命名はパス + メソッド + (リクエスト | レスポンス) の形式に(ソート時にきれいに並べたいため)
 
 ## Domain
 
 ```ts
+// ユーティリティ型
+type OmitId<T> = Omit<T, "id">;
+
 // 汎用的な型定義
 type UUID = string; // UUID v4形式の文字列
+type URL = string; // URLの文字列
 type Timestamp = string; // ISO 8601形式の日時文字列
 type JanCode = string; // JANコードの文字列
-type URL = string; // URLの文字列
 
 // ドメイン固有の型定義
 
@@ -81,21 +84,24 @@ type Reports = {
 type Buyer = {
   id: UserId;
   setting: BuyerSetting;
-  reports: Reports;
 };
 
-// 冷蔵庫アイテム（PantryItem）に関する型定義
+// 冷蔵庫（Pantry）に関する型定義
 type PantryItemId = UUID;
 
 type PantryItem = {
   id: PantryItemId;
-  itemName: string;
-  janCode: JanCode;
+  name: string;
+  janCode: JanCode | null;
   category: {
     id: string;
     name: string;
   };
 };
+
+type Pantry = {
+  items: PantryItem[];
+}
 
 // チャットメッセージ（ChatMessage）に関する型定義
 type Role = "system" | "assistant" | "user"; // systemはいらない？
@@ -108,12 +114,16 @@ type Recipe = {
 };
 
 type ChatMessage = {
-  role: Role;
+  role: "user" | "assistant";
   content: string;
-  recipes: Recipe[] | null; // roleが "user" | "system" のときはnull、"system"のときはレシピ提案が入る想定
-};
+  recipes: Recipe[] | null; // assistantのときのみレシピ提案がある想定
+}
 
 type Recipes = Recipe[];
+
+type Chat = {
+  messages: ChatMessage[];
+};
 
 // 店舗（Store）に関する型定義
 type StoreName = string;
@@ -123,32 +133,37 @@ type StoreAddress = string;
 
 type StoreSetting = {
   storeName: StoreName;
-  storeAddress: StoreAddress;
-  storeIconUrl: StoreIconUrl;
-  storeIntroduction: StoreIntroduction;
+  address: StoreAddress;
+  iconUrl: StoreIconUrl;
+  introduction: StoreIntroduction;
 };
 
 type Store = {
   id: UserId;
   setting: StoreSetting;
-  reports: Reports;
 };
 
 // 店舗の公開プロフィール
 type StoreProfile = {
   id: UserId;
   storeName: StoreName;
-  storeAddress: StoreAddress;
-  storeIconUrl: StoreIconUrl;
-  storeIntroduction: StoreIntroduction;
+  address: StoreAddress;
+  iconUrl: StoreIconUrl;
+  introduction: StoreIntroduction;
+};
+
+// Item 型の拡張
+
+// 購入者向けの商品情報（商品一覧表示などで使用）
+type ItemViewForBuyer = Item & {
+  // 今のところUI上で必要な拡張情報はなさそう
 };
 
 // 購入者向けの商品詳細情報
-
-type ItemDetailForBuyer = Item & {
+type ItemDetailForBuyer = ItemViewForBuyer & {
   description: string;
   store: StoreProfile;
-  janCode: JanCode;
+  janCode: JanCode | null;
   category: {
     id: string;
     name: string;
@@ -157,10 +172,21 @@ type ItemDetailForBuyer = Item & {
   saleEnd: Timestamp;
 };
 
-// 出品者向けの商品情報
-
-type ItemDetailForStore = ItemDetailForBuyer & {
+// 出品者向けの商品情報（自分の出品の一覧表示などで使用）
+type ItemViewForStore = Item & {
   hidden: boolean;
+};
+
+// 出品者向けの商品情報
+type ItemDetailForStore = ItemViewForStore & {
+  description: string;
+  janCode: JanCode | null;
+  category: {
+    id: string;
+    name: string;
+  };
+  saleStart: Timestamp;
+  saleEnd: Timestamp;
 };
 ```
 
@@ -175,8 +201,11 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 #### GET `/api/buyers/me`
 
 - 購入者アカウント情報の取得
-- `Buyer`型のレスポンス
 - 関数名：GetBuyers
+
+```ts
+type BuyersMeGetResponse = Buyer;
+```
 
 ```json
 {
@@ -185,10 +214,6 @@ type ItemDetailForStore = ItemDetailForBuyer & {
     "buyerName": "山田太郎",
     "allergens": ["egg", "milk"],
     "prompt": "私は料理が苦手です。簡単なレシピを教えてください。"
-  },
-  "reports": {
-    "totalCount": 10,
-    "totalDiscount": 5000
   }
 }
 ```
@@ -196,8 +221,13 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 #### PATCH `/api/buyers/me`
 
 - 購入者アカウント情報の更新
-- リクエストボディは`BuyerSetting`型
 - 関数名：PatchBuyers
+
+```ts
+type BuyersMePatchRequest = Partial<BuyerSetting>;
+
+type BuyersMePatchResponse = Buyer;
+```
 
 ```json
 {
@@ -215,8 +245,13 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 #### GET `/api/buyers/me/reports`
 
-- 報告した購入履歴の取得 -　レスポンスは`Reports`型
+- 報告した購入履歴の取得
 - 関数名：GetBuyersHistory
+
+```ts
+type BuyersMeReportsGetResponse = Reports;
+```
+
 ```json
 {
     "totalCount": 10,
@@ -239,16 +274,25 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 #### POST `/api/buyers/me/reports`
 
 - 購入報告の作成
-- リクエストボディは以下のような形式
 - 関数名：PostBuyersReports
+- レスポンスは作成された商品IDと報告日時
+
+```ts
+type BuyersMeReportsPostRequest = {
+  itemId: ItemId;
+};
+
+type BuyersMeReportsPostResponse = {
+  itemId: ItemId;
+  reportDate: Timestamp;
+};
+```
 
 ```json
 {
   "itemId": "123e4567-e89b-12d3-a456-426614174000"
 }
 ```
-
-- レスポンスは作成された報告の情報
 
 ```json
 {
@@ -259,15 +303,19 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 #### GET `/api/buyers/me/pantry`
 
-- 冷蔵庫アイテムの取得
-- レスポンスは`PantryItem`型の配列
+- 冷蔵庫情報の取得
 - 関数名：GetBuyersPantry
 
+```ts
+type BuyersMePantryGetResponse = Pantry;
+```
+
 ```json
-[
+{
+  "items": [
     {
         "id": "123e4567-e89b-12d3-a456-426614174000",
-        "itemName": "牛乳",
+        "name": "牛乳",
         "janCode": "4901234567890",
         "category": {
             "id": "dairy",
@@ -275,55 +323,51 @@ type ItemDetailForStore = ItemDetailForBuyer & {
         }
     },
     ...
-]
+  ]
+}
 ```
 
 #### POST `/api/buyers/me/pantry`
 
 - 冷蔵庫アイテムの追加
 - 内容がかぶったら何もしない
-- JANコードが見つからなかった場合はエラーを返す(400 Bad Request)
-- リクエストボディは以下のような形式
+- レスポンスは追加後の冷蔵庫情報
 - 関数名：PostBuyersPantryAdd
 
-```json
-[
-    {
-        "itemName": "牛乳",
-        "janCode": "4901234567890",
-        "category": {
-            "id": "dairy",
-            "name": "乳製品"
-        }
-    }
-]
+```ts
+type BuyersMePantryPostRequest = OmitId<PantryItem>[];
+
+type BuyersMePantryPostResponse = Pantry;
 ```
 
-
-- レスポンスは追加後の冷蔵庫アイテムの情報
-- `PantryItem`型の配列
-
 ```json
 [
     {
-        "id": "123e4567-e89b-12d3-a456-426614174000",
-        "itemName": "牛乳",
+        "name": "牛乳",
         "janCode": "4901234567890",
         "category": {
             "id": "dairy",
             "name": "乳製品"
         }
     }
-    ...
 ]
 ```
 
 #### DELETE `/api/buyers/me/pantry/`
 
 - 冷蔵庫アイテムの削除
-- リクエストボディは以下のような形式
 - `all`が`true`の場合は全削除、それ以外は`items`に指定されたIDのアイテムを削除
+- レスポンスは追加後の冷蔵庫情報
 - 関数名：DeleteBuyersPantry
+
+```ts
+type BuyersMePantryDeleteRequest = {
+  all: boolean;
+  items?: PantryItemId[];
+};
+
+type BuyersMePantryDeleteResponse = Pantry;
+```
 
 ```json
 {
@@ -332,45 +376,54 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 }
 ```
 
-- レスポンスは追加後の冷蔵庫アイテムの情報
-- `PantryItem`型の配列
-
-```json
-[]
-```
-
 #### GET `/api/buyers/me/chat/messages`
 
-- チャットの取得
-- レスポンスは`ChatMessage`型の配列
+- チャット情報の取得
 - 関数名：GetBuyersMessages
 
+```ts
+type BuyersMeChatMessagesGetResponse = Chat;
+```
+
 ```json
-[
-  {
-    "role": "user",
-    "content": "冷蔵庫に牛乳と卵があります。何かレシピを教えてください。",
-    "recipes": null
-  },
-  {
-    "role": "assistant",
-    "content": "牛乳と卵があるんですね。オムレツはいかがでしょうか？",
-    "recipes": [
-      {
-        "title": "簡単オムレツ",
-        "description": "牛乳と卵を使った簡単なオムレツのレシピです。",
-        "materials": ["卵 2個", "牛乳 大さじ2", "塩 少々", "こしょう 少々"]
-      }
-    ]
-  }
-]
+{
+  "messages":
+  [
+    {
+      "role": "user",
+      "content": "冷蔵庫に牛乳と卵があります。何かレシピを教えてください。",
+      "recipes": null
+    },
+    {
+      "role": "assistant",
+      "content": "牛乳と卵があるんですね。オムレツはいかがでしょうか？",
+      "recipes": [
+        {
+          "title": "簡単オムレツ",
+          "description": "牛乳と卵を使った簡単なオムレツのレシピです。",
+          "materials": ["卵 2個", "牛乳 大さじ2", "塩 少々", "こしょう 少々"]
+        }
+      ]
+    },
+    ...
+  ]
+}
 ```
 
 #### POST `/api/buyers/me/chat/messages`
 
 - チャットのポスト
-- リクエストボディは以下のような形式
+- レスポンスはポストされた後のチャット情報
+
 - 関数名：PostBuyersMessages
+
+```ts
+type BuyersMeChatMessagesPostRequest = {
+  content: string;
+};
+
+type BuyersMeChatMessagesPostResponse = Chat;
+```
 
 ```json
 {
@@ -378,36 +431,14 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 }
 ```
 
-- レスポンスはポストされた後のチャットの情報
-- `ChatMessage`型の配列
-
-```json
-[
-  {
-    "role": "user",
-    "content": "冷蔵庫に牛乳と卵があります。何かレシピを教えてください。",
-    "recipes": null
-  },
-  {
-    "role": "system",
-    "content": "牛乳と卵があるんですね。オムレツはいかがでしょうか？",
-    "recipes": [
-      {
-        "title": "簡単オムレツ",
-        "description": "牛乳と卵を使った簡単なオムレツのレシピです。",
-        "materials": ["卵 2個", "牛乳 大さじ2", "塩 少々", "こしょう 少々"]
-      }
-    ]
-  }
-]
-```
-
 #### GET `/api/buyers/me/chat/recipes`
 
 - チャットで提案されたレシピの取得
-- レスポンスは`Recipes`型
-- 画像URLや不足食材の情報などは未定
 - 関数名：GetBuyersRecipes
+
+```ts
+type BuyersMeChatRecipesGetResponse = Recipes;
+```
 
 ```json
 [
@@ -422,26 +453,27 @@ type ItemDetailForStore = ItemDetailForBuyer & {
     "materials": ["食パン 2枚", "卵 1個", "牛乳 100ml", "砂糖 大さじ1", "バター 少々"]
   }
 ]
+```
 
 ### Stores（店舗アカウント）
 
 #### GET `/api/stores/me`
 
 - 店舗アカウント情報の取得
-- `Store`型のレスポンス
 - 関数名：GetStores
+
+```ts
+type StoresMeGetResponse = Store;
+```
 
 ```json
 {
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "setting": {
     "storeName": "スーパーA",
-    "storeAddress": "東京都渋谷区1-2-3",
-    "storeIconUrl": "https://example.com/icon.png",
-    "storeIntroduction": "新鮮な食材をお届けします！"
-  },
-  "reports": {
-    "totalCount": 100
+    "address": "東京都渋谷区1-2-3",
+    "iconUrl": "https://example.com/icon.png",
+    "introduction": "新鮮な食材をお届けします！"
   }
 }
 ```
@@ -449,15 +481,33 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 #### PATCH `/api/stores/me`
 
 - 店舗アカウント情報の更新
-- リクエストボディは`StoreSetting`型
+- レスポンスは更新された店舗アカウント情報
 - 関数名：PatchStores
+
+```ts
+type StoresMePatchRequest = Partial<StoreSetting>;
+
+type StoresMePatchResponse = Store;
+```
 
 ```json
 {
   "storeName": "スーパーA",
-  "storeAddress": "東京都渋谷区1-2-3",
-  "storeIconUrl": "https://example.com/icon.png",
-  "storeIntroduction": "新鮮な食材をお届けします！"
+  "address": "東京都渋谷区1-2-3",
+  "iconUrl": "https://example.com/icon.png",
+  "introduction": "新鮮な食材をお届けします！"
+}
+```
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "setting": {
+    "storeName": "スーパーA",
+    "address": "東京都渋谷区1-2-3",
+    "iconUrl": "https://example.com/icon.png",
+    "introduction": "新鮮な食材をお届けします！"
+  }
 }
 ```
 
@@ -470,13 +520,15 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 #### GET `/api/stores/me/reports`
 
 - 自店舗の報告された購入履歴の取得
-- レスポンスは`Reports`型
 - 関数名：GetStoresReports
+
+```ts
+type StoresMeReportsGetResponse = Omit<Reports, "totalDiscount">
+```
 
 ```json
 {
     "totalCount": 100,
-    "totalDiscount": 50000,
     "items": [
         {
             "item": {
@@ -495,10 +547,11 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 #### GET `/api/stores/me/items`
 
 - 自店舗の出品一覧の取得
-- レスポンスは`ItemDetailForStore`型の配列
 - 関数名：GetStoresItems
 
-// TODO: Item & {hidden: bool}で十分な気もする
+```ts
+type StoresMeItemsGetResponse = ItemViewForStore[];
+```
 
 ```json
 [
@@ -507,21 +560,6 @@ type ItemDetailForStore = ItemDetailForBuyer & {
         "name": "牛乳",
         "imageUrl": "https://example.com/milk.png",
         "price": 200,
-        "description": "賞味期限が近い牛乳です。",
-        "store": {
-            "id": "123e4567-e89b-12d3-a456-426614174000",
-            "storeName": "スーパーA",
-            "storeAddress": "東京都渋谷区1-2-3",
-            "storeIconUrl": "https://example.com/icon.png",
-            "storeIntroduction": "新鮮な食材をお届けします！"
-        },
-        "janCode": "4901234567890",
-        "category": {
-            "id": "dairy",
-            "name": "乳製品"
-        },
-        "saleStart": "2024-01-01T00:00:00Z",
-        "saleEnd": "2024-01-07T00:00:00Z",
         "hidden": false
     },
     ...
@@ -531,8 +569,14 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 #### POST `/api/stores/me/items`
 
 - 自店舗の出品の作成
-- リクエストボディは以下のような形式
+
 - 関数名：PostStoresItems
+
+```ts
+type StoresMeItemsPostRequest = OmitId<ItemDetailForStore>;
+
+type StoresMeItemsPostResponse = ItemDetailForStore;
+```
 
 ```json
 {
@@ -540,16 +584,16 @@ type ItemDetailForStore = ItemDetailForBuyer & {
   "imageUrl": "https://example.com/milk.png",
   "price": 200,
   "description": "賞味期限が近い牛乳です。",
-  "storeId":"123e4567-e89b-12d3-a456-426614174000",
   "janCode": "4901234567890",
-  "categoryId": "dairy",
+  "category": {
+    "id": "dairy",
+    "name": "乳製品"
+  },
   "saleStart": "2024-01-01T00:00:00Z",
   "saleEnd": "2024-01-07T00:00:00Z",
   "hidden": false
 }
 ```
-
-- レスポンスは作成された出品の情報
 
 ```json
 {
@@ -558,13 +602,6 @@ type ItemDetailForStore = ItemDetailForBuyer & {
   "imageUrl": "https://example.com/milk.png",
   "price": 200,
   "description": "賞味期限が近い牛乳です。",
-  "store": {
-    "id": "123e4567-e89b-12d3-a456-426614174000",
-    "storeName": "スーパーA",
-    "storeAddress": "東京都渋谷区1-2-3",
-    "storeIconUrl": "https://example.com/icon.png",
-    "storeIntroduction": "新鮮な食材をお届けします！"
-  },
   "janCode": "4901234567890",
   "category": {
     "id": "dairy",
@@ -579,33 +616,45 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 #### GET `/api/stores/me/items/{item_id}`
 
 - 自店舗の出品の詳細取得
-- レスポンスは`ItemDetailForStore`型
 - 関数名：GetStoresItemsDetails
 
-```json
-省略
+```ts
+type StoresMeItemsDetailsGetResponse = ItemDetailForStore;
 ```
 
 #### PATCH `/api/stores/me/items/{item_id}`
 
 - 自店舗の出品の更新
-- リクエストボディは以下のような形式
 - 関数名：PatchStoresItemsDetails
+
+```ts
+type StoresMeItemsDetailsPatchRequest = Partial<OmitId<ItemDetailForStore>>;
+
+type StoresMeItemsDetailsPatchResponse = ItemDetailForStore;
+```
 
 ```json
 {
-  "janCode": "4901234567890",
-  "price": 200,
-  "description": "賞味期限が近い牛乳です。",
-  "saleEnd": "2024-01-07T00:00:00Z",
-  "hidden": false
+  "hidden": true
 }
 ```
 
-- レスポンスは更新された出品の情報
-
 ```json
-省略
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "name": "牛乳",
+  "imageUrl": "https://example.com/milk.png",
+  "price": 200,
+  "description": "賞味期限が近い牛乳です。",
+  "janCode": "4901234567890",
+  "category": {
+    "id": "dairy",
+    "name": "乳製品"
+  },
+  "saleStart": "2024-01-01T00:00:00Z",
+  "saleEnd": "2024-01-07T00:00:00Z",
+  "hidden": true
+}
 ```
 
 #### DELETE `/api/stores/me/items/{item_id}`
@@ -616,48 +665,40 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 #### GET `/api/stores/{store_id}`
 
-- 公開プロフィールの取得
-- レスポンスは`StoreProfile`型
+- 一般ユーザー向け公開プロフィールの取得
 - 関数名：GetStoresDetails
+
+```ts
+type StoresDetailsGetResponse = StoreProfile;
+```
 
 ```json
 {
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "storeName": "スーパーA",
-  "storeAddress": "東京都渋谷区1-2-3",
-  "storeIconUrl": "https://example.com/icon.png",
-  "storeIntroduction": "新鮮な食材をお届けします！"
+  "address": "東京都渋谷区1-2-3",
+  "iconUrl": "https://example.com/icon.png",
+  "introduction": "新鮮な食材をお届けします！"
 }
 ```
 
 #### GET `/api/stores/{store_id}/items`
 
-- 公開出品一覧の取得
+- 一般ユーザー向け公開出品一覧の取得
 - 期限切れの出品は非表示
-- レスポンスは`ItemDetailForBuyer`型の配列
 - 関数名：GetStoresDetailsItems
+
+```ts
+type StoresDetailsItemsGetResponse = ItemViewForBuyer[];
+```
+
 ```json
 [
     {
-        "id": "123e4567-e89b-12d3-a456-426614174000",
-        "name": "牛乳",
-        "imageUrl": "https://example.com/milk.png",
-        "price": 200,
-        "description": "賞味期限が近い牛乳です。",
-        "store": {
-            "id": "123e4567-e89b-12d3-a456-426614174000",
-            "storeName": "スーパーA",
-            "storeAddress": "東京都渋谷区1-2-3",
-            "storeIconUrl": "https://example.com/icon.png",
-            "storeIntroduction": "新鮮な食材をお届けします！"
-        },
-        "janCode": "4901234567890",
-        "category": {
-            "id": "dairy",
-            "name": "乳製品"
-        },
-        "saleStart": "2024-01-01T00:00:00Z",
-        "saleEnd": "2024-01-07T00:00:00Z"
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "name": "牛乳",
+      "imageUrl": "https://example.com/milk.png",
+      "price": 200,
     },
     ...
 ]
@@ -665,13 +706,19 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 ### Items（出品物公開検索・詳細）
 
-#### GET `/api/items?{conditions}`
+#### GET `/api/items?{query}`
 
 - 出品物の検索・一覧の取得
-- クエリパラメータは以下に示す条件を想定 - `keyword`: 商品名や説明文に対するキーワード検索
+- クエリパラメータは以下に示す条件を想定 
+  - `q`: 商品名や説明文に対するキーワード検索
+  - `category`: カテゴリIDでの絞り込み
+  - `price_max` / `price_min`: 価格の範囲指定
   // TODO: クエリパラメータの条件は要検討
-- レスポンスは`Item`型の配列
 - 関数名：GetItems
+
+```ts
+type ItemsGetResponse = ItemDetailForBuyer[];
+```
 
 ```json
 [
@@ -688,8 +735,12 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 #### GET `/api/items/{item_id}`
 
 - 出品物の詳細の取得
-- レスポンスは`ItemDetailForBuyer`型
+- 非公開の出品に対しては404を返す
 - 関数名：GetItemsDetails
+
+```ts
+type ItemsDetailsGetResponse = ItemDetailForBuyer;
+```
 
 ```json
 {
@@ -701,9 +752,9 @@ type ItemDetailForStore = ItemDetailForBuyer & {
   "store": {
     "id": "123e4567-e89b-12d3-a456-426614174000",
     "storeName": "スーパーA",
-    "storeAddress": "東京都渋谷区1-2-3",
-    "storeIconUrl": "https://example.com/icon.png",
-    "storeIntroduction": "新鮮な食材をお届けします！"
+    "address": "東京都渋谷区1-2-3",
+    "iconUrl": "https://example.com/icon.png",
+    "introduction": "新鮮な食材をお届けします！"
   },
   "janCode": "4901234567890",
   "category": {
@@ -720,9 +771,13 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 #### GET `/api/pantry/suggestions?{query}`
 
 - 冷蔵庫食材名の補完候補の取得
-- クエリパラメータは`query`を想定(例: `query=牛`など)
+- クエリパラメータは`q`を想定(例: `q=牛`など)
 - レスポンスは以下のような形式
 - 関数名：GetPantry
+
+```ts
+type PantrySuggestionsGetResponse = string[];
+```
 
 ```json
 [
@@ -739,8 +794,14 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 画像のアップロード
 - リクエストはmultipart/form-dataで画像ファイルを送信
-- レスポンスはアップロードされた画像のURL
 - 関数名：PostUploadImage
+
+```ts
+type UploadImagePostResponse = {
+  id: ImageId;
+  imageUrl: URL;
+};
+```
 
 ```json
 {
@@ -752,6 +813,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 #### GET `/api/upload/image/{image_id}`
 
 - 画像の取得
+- 静的ファイルで直接配信する想定(ほんとはAPIではない)
 - レスポンスは画像ファイル
 - 関数名：GetUploadImage
 
@@ -759,4 +821,5 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 画像の削除
 - レスポンスは空
+- 権限の問題がめんどくさいので、実装しないかAdminの権限をつくるか
 - 関数名：DeleteUploadImage
