@@ -287,10 +287,18 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 - 関数名：PostBuyersPantryAdd
 
 ```json
-{
-  "janCode": "4901234567890"
-}
+[
+    {
+        "itemName": "牛乳",
+        "janCode": "4901234567890",
+        "category": {
+            "id": "dairy",
+            "name": "乳製品"
+        }
+    }
+]
 ```
+
 
 - レスポンスは追加後の冷蔵庫アイテムの情報
 - `PantryItem`型の配列
@@ -305,7 +313,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
             "id": "dairy",
             "name": "乳製品"
         }
-    },
+    }
     ...
 ]
 ```
@@ -528,10 +536,16 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 ```json
 {
-  "janCode": "4901234567890",
+  "name": "牛乳",
+  "imageUrl": "https://example.com/milk.png",
   "price": 200,
   "description": "賞味期限が近い牛乳です。",
-  "saleEnd": "2024-01-07T00:00:00Z"
+  "storeId":"123e4567-e89b-12d3-a456-426614174000",
+  "janCode": "4901234567890",
+  "categoryId": "dairy",
+  "saleStart": "2024-01-01T00:00:00Z",
+  "saleEnd": "2024-01-07T00:00:00Z",
+  "hidden": false
 }
 ```
 
