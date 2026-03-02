@@ -113,7 +113,7 @@ type Recipe = {
 };
 
 type ChatMessage = {
-  role: "user" | "assistant";
+  role: Role;
   content: string;
   recipes: Recipe[] | null; // assistantのときのみレシピ提案がある想定
 }
@@ -695,7 +695,7 @@ type StoresDetailsItemsGetResponse = ItemViewForBuyer[];
 - 関数名：GetItems
 
 ```ts
-type ItemsGetResponse = ItemDetailForBuyer[];
+type ItemsGetResponse = ItemViewForBuyer[];
 ```
 
 ```json
@@ -805,7 +805,7 @@ type JanGetResponse = {
     "category": "乳製品"
 }
 ```
-  
+
 ### 画像アップロード用
 
 #### POST `/api/upload/image`
