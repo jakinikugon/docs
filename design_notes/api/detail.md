@@ -22,6 +22,9 @@ type JanCode = string; // JANコードの文字列
 type UserId = UUID;
 type ItemId = UUID;
 type ImageId = UUID;
+type PantryItemId = UUID;
+
+type ItemCategory = string;
 
 type Item = {
   id: ItemId;
@@ -87,16 +90,12 @@ type Buyer = {
 };
 
 // 冷蔵庫（Pantry）に関する型定義
-type PantryItemId = UUID;
 
 type PantryItem = {
   id: PantryItemId;
   name: string;
   janCode: JanCode | null;
-  category: {
-    id: string;
-    name: string;
-  };
+  category: ItemCategory;
 };
 
 type Pantry = {
@@ -164,10 +163,7 @@ type ItemDetailForBuyer = ItemViewForBuyer & {
   description: string;
   store: StoreProfile;
   janCode: JanCode | null;
-  category: {
-    id: string;
-    name: string;
-  };
+  category: ItemCategory;
   saleStart: Timestamp;
   saleEnd: Timestamp;
 };
@@ -181,10 +177,7 @@ type ItemViewForStore = Item & {
 type ItemDetailForStore = ItemViewForStore & {
   description: string;
   janCode: JanCode | null;
-  category: {
-    id: string;
-    name: string;
-  };
+  category: ItemCategory;
   saleStart: Timestamp;
   saleEnd: Timestamp;
 };
@@ -317,10 +310,7 @@ type BuyersMePantryGetResponse = Pantry;
         "id": "123e4567-e89b-12d3-a456-426614174000",
         "name": "牛乳",
         "janCode": "4901234567890",
-        "category": {
-            "id": "dairy",
-            "name": "乳製品"
-        }
+        "category": "乳製品",
     },
     ...
   ]
@@ -345,10 +335,7 @@ type BuyersMePantryPostResponse = Pantry;
     {
         "name": "牛乳",
         "janCode": "4901234567890",
-        "category": {
-            "id": "dairy",
-            "name": "乳製品"
-        }
+        "category": "乳製品"
     }
 ]
 ```
@@ -585,10 +572,7 @@ type StoresMeItemsPostResponse = ItemDetailForStore;
   "price": 200,
   "description": "賞味期限が近い牛乳です。",
   "janCode": "4901234567890",
-  "category": {
-    "id": "dairy",
-    "name": "乳製品"
-  },
+  "category": "乳製品",
   "saleStart": "2024-01-01T00:00:00Z",
   "saleEnd": "2024-01-07T00:00:00Z",
   "hidden": false
@@ -603,10 +587,7 @@ type StoresMeItemsPostResponse = ItemDetailForStore;
   "price": 200,
   "description": "賞味期限が近い牛乳です。",
   "janCode": "4901234567890",
-  "category": {
-    "id": "dairy",
-    "name": "乳製品"
-  },
+  "category": "乳製品",
   "saleStart": "2024-01-01T00:00:00Z",
   "saleEnd": "2024-01-07T00:00:00Z",
   "hidden": false
@@ -647,10 +628,7 @@ type StoresMeItemsDetailsPatchResponse = ItemDetailForStore;
   "price": 200,
   "description": "賞味期限が近い牛乳です。",
   "janCode": "4901234567890",
-  "category": {
-    "id": "dairy",
-    "name": "乳製品"
-  },
+  "category": "乳製品",
   "saleStart": "2024-01-01T00:00:00Z",
   "saleEnd": "2024-01-07T00:00:00Z",
   "hidden": true
@@ -757,10 +735,7 @@ type ItemsDetailsGetResponse = ItemDetailForBuyer;
     "introduction": "新鮮な食材をお届けします！"
   },
   "janCode": "4901234567890",
-  "category": {
-    "id": "dairy",
-    "name": "乳製品"
-  },
+  "category": "乳製品",
   "saleStart": "2024-01-01T00:00:00Z",
   "saleEnd": "2024-01-07T00:00:00Z"
 }
@@ -786,6 +761,28 @@ type PantrySuggestionsGetResponse = string[];
     "牛すじ",
     ...
 ],
+```
+
+### カテゴリ一覧の取得
+
+#### GET `/api/categories`
+
+- カテゴリ一覧の取得
+- カテゴリの粒度は決めてない
+- 関数名：GetCategories
+
+```ts
+type CategoriesGetResponse = ItemCategory[];
+```
+
+```json
+[
+    "乳製品",
+    "肉類",
+    "野菜",
+    "果物",
+    ...
+]
 ```
 
 ### 画像アップロード用
