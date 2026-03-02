@@ -2,8 +2,8 @@
 
 ## Note
 
-- 認証認可に関しては未定
 - APIの型名の命名はパス + メソッド + (リクエスト | レスポンス) の形式に(ソート時にきれいに並べたいため)
+- トークンはとりあえずボディで受け取る想定で
 
 ## Domain
 
@@ -16,6 +16,10 @@ type UUID = string; // UUID v4形式の文字列
 type URL = string; // URLの文字列
 type Timestamp = string; // ISO 8601形式の日時文字列
 type JanCode = string; // JANコードの文字列
+type Email = string; // メールアドレスの文字列
+type Password = string; // パスワードの文字列
+type JWT = string; // JWTトークンの文字列
+
 
 // ドメイン固有の型定義
 
@@ -24,6 +28,7 @@ type ItemId = UUID;
 type ImageId = UUID;
 type PantryItemId = UUID;
 
+type AccountType = "buyer" | "store";
 type ItemCategory = string;
 
 type Item = {
@@ -187,7 +192,128 @@ type ItemDetailForStore = ItemViewForStore & {
 
 ### Auth / Session（個人/店舗 共通）
 
-// TODO: OAuth or メールアドレスとパスワードのどちらにするかも決まってないので、まだ未定
+#### POST `/api/auth/register`
+
+- ユーザー登録
+- EmailとPasswordを受け取ってユーザーを作成する想定
+- ログインも同時に行う？
+
+```ts
+type AuthRegisterRequest = {
+  email: Email;
+  password: Password;
+  accountType: AccountType;
+};
+
+type AuthRegisterResponse = {
+  userId: UserId;
+  email: Email;
+  accountType: AccountType;
+};
+```
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "accountType": "buyer"
+}
+
+```
+
+```json
+{
+  "userId": "123e4567-e89b-12d3-a456-426614174000",
+  "email": "user@example.com",
+  "accountType": "buyer"
+}
+```
+
+#### POST `/api/auth/login`
+
+- ログイン
+- EmailとPasswordを受け取ってアクセストークンを発行する想定
+
+```ts
+type AuthLoginRequest = {
+  email: Email;
+  password: Password;
+};
+
+type AuthLoginResponse = {
+  accessToken: JWT;
+  refreshToken: JWT;
+};
+```
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", 
+  "refreshToken": "dGhpc2lzYXJlZnJlc2h0b2tlbg..."
+}
+```
+
+#### POST `/api/auth/logout`
+
+- ログアウト
+- アクセストークンを無効化する想定
+- レスポンスは空
+
+#### GET `/api/auth/session`
+
+- セッション情報の取得
+- アクセストークンからユーザーIDとアカウントタイプを返す
+- 関数名：GetAuthSession
+
+```ts
+type AuthSessionGetResponse = {
+  userId: UserId;
+  accountType: AccountType;
+};
+```
+
+```json
+{
+  "userId": "123e4567-e89b-12d3-a456-426614174000",
+  "accountType": "buyer"
+}
+```
+
+#### POST `/api/auth/refresh`
+
+- アクセストークンのリフレッシュ
+- リフレッシュトークンを受け取って新しいアクセストークンを発行する想定
+
+```ts
+type AuthRefreshRequest = {
+  refreshToken: JWT;
+};
+
+type AuthRefreshResponse = {
+  accessToken: JWT;
+  refreshToken: JWT;
+};
+```
+
+```json
+{
+  "refreshToken": "dGhpc2lzYXJlZnJlc2h0b2tlbg..."
+}
+```
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "dGhpc2lzYXJlZnJlc2h0b2tlbg..."
+}
+```
 
 ### Buyers（個人アカウント）
 
