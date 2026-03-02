@@ -785,6 +785,27 @@ type CategoriesGetResponse = ItemCategory[];
 ]
 ```
 
+### JANコードから商品情報の取得
+
+#### GET `/api/jan/{jan_code}`
+
+- JANコードから商品情報の取得
+- 関数名：GetJan
+
+```ts
+type JanGetResponse = {
+  name: string;
+  category: ItemCategory;
+};
+```
+
+```json
+{
+    "name": "牛乳",
+    "category": "乳製品"
+}
+```
+  
 ### 画像アップロード用
 
 #### POST `/api/upload/image`

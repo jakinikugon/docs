@@ -37,3 +37,13 @@
 ### カテゴリ一覧の取得
 
 - `/api/categories`(`GET`): カテゴリ一覧の取得
+
+### JANコードから商品情報の取得
+
+- `/api/items/jan/{jan_code}`(`GET`): JANコードから商品情報の取得
+
+### 画像アップロード用
+
+- `/api/upload/image`(`POST`): 画像アップロード用
+- `/api/upload/image/{image_id}`(`GET`): 画像の取得
+- `/api/upload/image/{image_id}`(`DELETE`): 画像の削除
