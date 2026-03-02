@@ -176,6 +176,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 購入者アカウント情報の取得
 - `Buyer`型のレスポンス
+- 関数名：GetBuyers
 
 ```json
 {
@@ -196,6 +197,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 購入者アカウント情報の更新
 - リクエストボディは`BuyerSetting`型
+- 関数名：UpdateBuyers
 
 ```json
 {
