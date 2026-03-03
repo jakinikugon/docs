@@ -176,7 +176,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 購入者アカウント情報の取得
 - `Buyer`型のレスポンス
-- 関数名：GetBuyers
+- 関数名：GetBuyersMe
 
 ```json
 {
@@ -197,7 +197,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 購入者アカウント情報の更新
 - リクエストボディは`BuyerSetting`型
-- 関数名：PatchBuyers
+- 関数名：PatchBuyersMe
 
 ```json
 {
@@ -211,12 +211,13 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 購入者アカウントの削除
 - レスポンスは空
-- 関数名：DeleteBuyers
+- 関数名：DeleteBuyersMe
 
 #### GET `/api/buyers/me/reports`
 
 - 報告した購入履歴の取得 -　レスポンスは`Reports`型
-- 関数名：GetBuyersHistory
+- 関数名：GetBuyersMeReports
+
 ```json
 {
     "totalCount": 10,
@@ -240,7 +241,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 購入報告の作成
 - リクエストボディは以下のような形式
-- 関数名：PostBuyersReports
+- 関数名：PostBuyersMeReports
 
 ```json
 {
@@ -261,7 +262,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 冷蔵庫アイテムの取得
 - レスポンスは`PantryItem`型の配列
-- 関数名：GetBuyersPantry
+- 関数名：GetBuyersMePantry
 
 ```json
 [
@@ -284,7 +285,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 - 内容がかぶったら何もしない
 - JANコードが見つからなかった場合はエラーを返す(400 Bad Request)
 - リクエストボディは以下のような形式
-- 関数名：PostBuyersPantryAdd
+- 関数名：PostBuyersMePantry
 
 ```json
 {
@@ -315,7 +316,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 - 冷蔵庫アイテムの削除
 - リクエストボディは以下のような形式
 - `all`が`true`の場合は全削除、それ以外は`items`に指定されたIDのアイテムを削除
-- 関数名：DeleteBuyersPantry
+- 関数名：DeleteBuyersMePantry
 
 ```json
 {
@@ -335,7 +336,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - チャットの取得
 - レスポンスは`ChatMessage`型の配列
-- 関数名：GetBuyersMessages
+- 関数名：GetBuyersMeChatMessages
 
 ```json
 [
@@ -362,7 +363,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - チャットのポスト
 - リクエストボディは以下のような形式
-- 関数名：PostBuyersMessages
+- 関数名：PostBuyersMeChatMessages
 
 ```json
 {
@@ -399,7 +400,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 - チャットで提案されたレシピの取得
 - レスポンスは`Recipes`型
 - 画像URLや不足食材の情報などは未定
-- 関数名：GetBuyersRecipes
+- 関数名：GetBuyersMeChatRecipes
 
 ```json
 [
@@ -421,7 +422,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 店舗アカウント情報の取得
 - `Store`型のレスポンス
-- 関数名：GetStores
+- 関数名：GetStoresMe
 
 ```json
 {
@@ -442,7 +443,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 店舗アカウント情報の更新
 - リクエストボディは`StoreSetting`型
-- 関数名：PatchStores
+- 関数名：PatchStoresMe
 
 ```json
 {
@@ -457,13 +458,13 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 店舗アカウントの削除
 - レスポンスは空
-- 関数名：DeleteStores
+- 関数名：DeleteStoresMe
 
 #### GET `/api/stores/me/reports`
 
 - 自店舗の報告された購入履歴の取得
 - レスポンスは`Reports`型
-- 関数名：GetStoresReports
+- 関数名：GetStoresMeReports
 
 ```json
 {
@@ -488,7 +489,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 自店舗の出品一覧の取得
 - レスポンスは`ItemDetailForStore`型の配列
-- 関数名：GetStoresItems
+- 関数名：GetStoresMeItems
 
 // TODO: Item & {hidden: bool}で十分な気もする
 
@@ -524,7 +525,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 自店舗の出品の作成
 - リクエストボディは以下のような形式
-- 関数名：PostStoresItems
+- 関数名：PostStoresMeItems
 
 ```json
 {
@@ -566,7 +567,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 自店舗の出品の詳細取得
 - レスポンスは`ItemDetailForStore`型
-- 関数名：GetStoresItemsDetails
+- 関数名：GetStoresMeItemsItemId
 
 ```json
 省略
@@ -576,7 +577,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 自店舗の出品の更新
 - リクエストボディは以下のような形式
-- 関数名：PatchStoresItemsDetails
+- 関数名：PatchStoresItemsItemId
 
 ```json
 {
@@ -598,13 +599,13 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 自店舗の出品の削除
 - レスポンスは空
-- 関数名：DeleteStoresItemsDetails
+- 関数名：DeleteStoresMeItemsItemId
 
 #### GET `/api/stores/{store_id}`
 
 - 公開プロフィールの取得
 - レスポンスは`StoreProfile`型
-- 関数名：GetStoresDetails
+- 関数名：GetStoresStoreId
 
 ```json
 {
@@ -621,7 +622,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 - 公開出品一覧の取得
 - 期限切れの出品は非表示
 - レスポンスは`ItemDetailForBuyer`型の配列
-- 関数名：GetStoresDetailsItems
+- 関数名：GetStoresStoreIdItems
 ```json
 [
     {
@@ -657,7 +658,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 - クエリパラメータは以下に示す条件を想定 - `keyword`: 商品名や説明文に対するキーワード検索
   // TODO: クエリパラメータの条件は要検討
 - レスポンスは`Item`型の配列
-- 関数名：GetItems
+- 関数名：GetItemsConditions
 
 ```json
 [
@@ -675,7 +676,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 出品物の詳細の取得
 - レスポンスは`ItemDetailForBuyer`型
-- 関数名：GetItemsDetails
+- 関数名：GetItemsItemId
 
 ```json
 {
@@ -708,7 +709,7 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 - 冷蔵庫食材名の補完候補の取得
 - クエリパラメータは`query`を想定(例: `query=牛`など)
 - レスポンスは以下のような形式
-- 関数名：GetPantry
+- 関数名：GetPantrySuggestionsQuery
 
 ```json
 [
@@ -745,4 +746,4 @@ type ItemDetailForStore = ItemDetailForBuyer & {
 
 - 画像の削除
 - レスポンスは空
-- 関数名：DeleteUploadImage
+- 関数名：DeleteUploadImageImageId
