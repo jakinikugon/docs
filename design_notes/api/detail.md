@@ -13,13 +13,13 @@
 type OmitId<T> = Omit<T, "id">;
 
 // 汎用的な型定義
-type UUID = string; // UUID v4形式の文字列
-type URL = string; // URLの文字列
-type Timestamp = string; // ISO 8601形式の日時文字列
-type JanCode = string; // JANコードの文字列
+type UUID = string; // UUID v4 形式の文字列
+type URL = string; // URL の文字列
+type Timestamp = string; // ISO 8601 形式の日時文字列
+type JanCode = string; // JAN コードの文字列
 type Email = string; // メールアドレスの文字列
 type Password = string; // パスワードの文字列
-type JWT = string; // JWTトークンの文字列
+type JWT = string; // JWT トークンの文字列
 
 // ドメイン固有の型定義
 
@@ -114,13 +114,13 @@ type Recipe = {
   title: string;
   description: string;
   materials: string[];
-  // TODO: 画像URL、不足食材の情報なども
+  // TODO: 画像 URL、不足食材の情報なども
 };
 
 type ChatMessage = {
   role: Role;
   content: string;
-  recipes: Recipe[] | null; // assistantのときのみレシピ提案がある想定
+  recipes: Recipe[] | null; // assistant のときのみレシピ提案がある想定
 };
 
 type Recipes = Recipe[];
@@ -195,7 +195,7 @@ type ItemDetailForStore = ItemViewForStore & {
 #### POST `/api/auth/register`
 
 - ユーザー登録
-- EmailとPasswordを受け取ってユーザーを作成する想定
+- Email と Password を受け取ってユーザーを作成する想定
 - ログインも同時に行う？
 
 ```ts
@@ -231,7 +231,7 @@ type AuthRegisterResponse = {
 #### POST `/api/auth/login`
 
 - ログイン
-- EmailとPasswordを受け取ってアクセストークンを発行する想定
+- Email と Password を受け取ってアクセストークンを発行する想定
 
 ```ts
 type AuthLoginRequest = {
@@ -268,7 +268,7 @@ type AuthLoginResponse = {
 #### GET `/api/auth/session`
 
 - セッション情報の取得
-- アクセストークンからユーザーIDとアカウントタイプを返す
+- アクセストークンからユーザー ID とアカウントタイプを返す
 - 関数名：GetAuthSession
 
 ```ts
@@ -319,7 +319,7 @@ type AuthRefreshResponse = {
 #### GET `/api/buyers/me`
 
 - 購入者アカウント情報の取得
-- `Buyer`型のレスポンス
+- `Buyer` 型のレスポンス
 - 関数名：GetBuyersMe
 
 ```ts
@@ -340,7 +340,7 @@ type BuyersMeGetResponse = Buyer;
 #### PATCH `/api/buyers/me`
 
 - 購入者アカウント情報の更新
-- リクエストボディは`BuyerSetting`型
+- リクエストボディは `BuyerSetting` 型
 - 関数名：PatchBuyersMe
 
 ```ts
@@ -395,7 +395,7 @@ type BuyersMeReportsGetResponse = Reports;
 
 - 購入報告の作成
 - 関数名：PostBuyersMeReports
-- レスポンスは作成された商品IDと報告日時
+- レスポンスは作成された商品 ID と報告日時
 
 ```ts
 type BuyersMeReportsPostRequest = {
@@ -676,7 +676,6 @@ type StoresMeItemsGetResponse = ItemViewForStore[];
 #### POST `/api/stores/me/items`
 
 - 自店舗の出品の作成
-
 - 関数名：PostStoresMeItems
 
 ```ts
@@ -833,7 +832,7 @@ type ItemsGetResponse = ItemViewForBuyer[];
 #### GET `/api/items/{item_id}`
 
 - 出品物の詳細の取得
-- 非公開の出品に対しては404を返す
+- 非公開の出品に対しては 404 を返す
 - 関数名：GetItemsItemId
 
 ```ts
@@ -866,7 +865,7 @@ type ItemsDetailsGetResponse = ItemDetailForBuyer;
 #### GET `/api/pantry/suggestions?{query}`
 
 - 冷蔵庫食材名の補完候補の取得
-- クエリパラメータは`q`を想定(例: `q=牛`など)
+- クエリパラメータは `q` を想定(例: `q=牛` など)
 - レスポンスは以下のような形式
 - 関数名：GetPantrySuggestionsQuery
 
@@ -905,7 +904,7 @@ type CategoriesGetResponse = ItemCategory[];
 ]
 ```
 
-### JANコードから商品情報の取得
+### JAN コードから商品情報の取得
 
 #### GET `/api/jan/{jan_code}`
 
@@ -931,7 +930,7 @@ type JanGetResponse = {
 #### POST `/api/upload/image`
 
 - 画像のアップロード
-- リクエストはmultipart/form-dataで画像ファイルを送信
+- リクエストは multipart/form-data で画像ファイルを送信
 - 関数名：PostUploadImage
 
 ```ts
@@ -951,7 +950,7 @@ type UploadImagePostResponse = {
 #### GET `/api/upload/image/{image_id}`
 
 - 画像の取得
-- 静的ファイルで直接配信する想定(ほんとはAPIではない)
+- 静的ファイルで直接配信する想定(ほんとは API ではない)
 - レスポンスは画像ファイル
 - 関数名：GetUploadImage
 
@@ -959,5 +958,5 @@ type UploadImagePostResponse = {
 
 - 画像の削除
 - レスポンスは空
-- 権限の問題がめんどくさいので、実装しないかAdminの権限をつくるか
+- 権限の問題がめんどくさいので、実装しないか Admin の権限をつくるか
 - 関数名：DeleteUploadImageImageId
