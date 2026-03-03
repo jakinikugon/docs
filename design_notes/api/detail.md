@@ -2,7 +2,8 @@
 
 ## Note
 
-- APIの型名の命名はパス + メソッド + (リクエスト | レスポンス) の形式に(ソート時にきれいに並べたいため)
+- APIの型名の命名はパス + メソッド + (リクエスト | レスポンス) の形式にする
+  - ソート時にきれいに並べたいため
 - トークンはとりあえずボディで受け取る想定で
 
 ## Domain
@@ -19,7 +20,6 @@ type JanCode = string; // JANコードの文字列
 type Email = string; // メールアドレスの文字列
 type Password = string; // パスワードの文字列
 type JWT = string; // JWTトークンの文字列
-
 
 // ドメイン固有の型定義
 
@@ -105,7 +105,7 @@ type PantryItem = {
 
 type Pantry = {
   items: PantryItem[];
-}
+};
 
 // チャットメッセージ（ChatMessage）に関する型定義
 type Role = "system" | "assistant" | "user"; // systemはいらない？
@@ -121,7 +121,7 @@ type ChatMessage = {
   role: Role;
   content: string;
   recipes: Recipe[] | null; // assistantのときのみレシピ提案がある想定
-}
+};
 
 type Recipes = Recipe[];
 
@@ -218,7 +218,6 @@ type AuthRegisterResponse = {
   "password": "password123",
   "accountType": "buyer"
 }
-
 ```
 
 ```json
@@ -255,7 +254,7 @@ type AuthLoginResponse = {
 
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", 
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "refreshToken": "dGhpc2lzYXJlZnJlc2h0b2tlbg..."
 }
 ```
@@ -460,11 +459,11 @@ type BuyersMePantryPostResponse = Pantry;
 
 ```json
 [
-    {
-        "name": "牛乳",
-        "janCode": "4901234567890",
-        "category": "乳製品"
-    }
+  {
+    "name": "牛乳",
+    "janCode": "4901234567890",
+    "category": "乳製品"
+  }
 ]
 ```
 
@@ -552,7 +551,13 @@ type BuyersMeChatRecipesGetResponse = Recipes;
   {
     "title": "フレンチトースト",
     "description": "牛乳と卵を使って手軽に作れるフレンチトーストです。",
-    "materials": ["食パン 2枚", "卵 1個", "牛乳 100ml", "砂糖 大さじ1", "バター 少々"]
+    "materials": [
+      "食パン 2枚",
+      "卵 1個",
+      "牛乳 100ml",
+      "砂糖 大さじ1",
+      "バター 少々"
+    ]
   }
 ]
 ```
@@ -625,7 +630,7 @@ type StoresMePatchResponse = Store;
 - 関数名：GetStoresMeReports
 
 ```ts
-type StoresMeReportsGetResponse = Omit<Reports, "totalDiscount">
+type StoresMeReportsGetResponse = Omit<Reports, "totalDiscount">;
 ```
 
 ```json
@@ -802,11 +807,11 @@ type StoresDetailsItemsGetResponse = ItemViewForBuyer[];
 #### GET `/api/items?{query}`
 
 - 出品物の検索・一覧の取得
-- クエリパラメータは以下に示す条件を想定 
+- クエリパラメータは以下に示す条件を想定
   - `q`: 商品名や説明文に対するキーワード検索
   - `category`: カテゴリIDでの絞り込み
   - `price_max` / `price_min`: 価格の範囲指定
-  // TODO: クエリパラメータの条件は要検討
+    // TODO: クエリパラメータの条件は要検討
 - 関数名：GetItemsConditions
 
 ```ts
@@ -916,8 +921,8 @@ type JanGetResponse = {
 
 ```json
 {
-    "name": "牛乳",
-    "category": "乳製品"
+  "name": "牛乳",
+  "category": "乳製品"
 }
 ```
 
@@ -938,8 +943,8 @@ type UploadImagePostResponse = {
 
 ```json
 {
-    "id": "123e4567-e89b-12d3-a456-426614174000",
-    "imageUrl": "https://example.com/image/123e4567-e89b-12d3-a456-426614174000.png"
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "imageUrl": "https://example.com/image/123e4567-e89b-12d3-a456-426614174000.png"
 }
 ```
 
