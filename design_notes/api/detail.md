@@ -520,8 +520,8 @@ type BuyersMeReportsGetResponse = Reports;
         "name": "牛乳",
         "imageUrl": "https://example.com/milk.png",
         "price": {
-          "regular": "1000",
-          "discount": "980"
+          "regular": 1000,
+          "discount": 980
         }
       },
       "date": "2024-01-01T12:00:00Z"
@@ -542,12 +542,12 @@ type BuyersMeReportsGetResponse = Reports;
 ```ts
 type BuyersMeReportsPostRequest = {
   itemId: ItemId;
-  addPantry: boolean:
+  addPantry: boolean;
 };
 
 type BuyersMeReportsPostResponse = {
   itemId: ItemId;
-  addPantry: boolean:
+  addPantry: boolean;
   reportDate: Timestamp;
 };
 ```
@@ -607,13 +607,11 @@ type BuyersMePantryPostResponse = Pantry;
 ```
 
 ```json
-[
-  {
-    "name": "牛乳",
-    "janCode": "4901234567890",
-    "category": "乳製品"
-  }
-]
+{
+  "name": "牛乳",
+  "janCode": "4901234567890",
+  "category": "乳製品"
+}
 ```
 
 #### DELETE `/api/buyers/me/pantry/{pantry_item_id}`
@@ -787,8 +785,8 @@ type StoresMeReportsGetResponse = Omit<Reports, "totalDiscount">;
         "name": "牛乳",
         "imageUrl": "https://example.com/milk.png",
         "price": {
-          "regular": "1000",
-          "discount": "980"
+          "regular": 1000,
+          "discount": 980
         }
       },
       "date": "2024-01-01T12:00:00Z"
@@ -816,8 +814,8 @@ type StoresMeItemsGetResponse = ItemViewForStore[];
     "name": "牛乳",
     "imageUrl": "https://example.com/milk.png",
     "price": {
-      "regular": "1000",
-      "discount": "980"
+      "regular": 1000,
+      "discount": 980
     },
     "hidden": false
   },
@@ -843,15 +841,16 @@ type StoresMeItemsPostResponse = ItemDetailForStore;
   "name": "牛乳",
   "imageUrl": "https://example.com/milk.png",
   "price": {
-    "regular": "1000",
-    "discount": "980"
+    "regular": 1000,
+    "discount": 980
   },
   "description": "賞味期限が近い牛乳です。",
   "janCode": "4901234567890",
   "category": "乳製品",
   "saleStart": "2024-01-01T00:00:00Z",
   "saleEnd": "2024-01-07T00:00:00Z",
-  "hidden": false
+  "hidden": false,
+  "limitDate": "2024-01-07T00:00:00Z"
 }
 ```
 
@@ -861,15 +860,16 @@ type StoresMeItemsPostResponse = ItemDetailForStore;
   "name": "牛乳",
   "imageUrl": "https://example.com/milk.png",
   "price": {
-    "regular": "1000",
-    "discount": "980"
+    "regular": 1000,
+    "discount": 980
   },
   "description": "賞味期限が近い牛乳です。",
   "janCode": "4901234567890",
   "category": "乳製品",
   "saleStart": "2024-01-01T00:00:00Z",
   "saleEnd": "2024-01-07T00:00:00Z",
-  "hidden": false
+  "hidden": false,
+  "limitDate": "2024-01-07T00:00:00Z"
 }
 ```
 
@@ -905,15 +905,16 @@ type StoresMeItemsDetailsPatchResponse = ItemDetailForStore;
   "name": "牛乳",
   "imageUrl": "https://example.com/milk.png",
   "price": {
-    "regular": "1000",
-    "discount": "980"
+    "regular": 1000,
+    "discount": 980
   },
   "description": "賞味期限が近い牛乳です。",
   "janCode": "4901234567890",
   "category": "乳製品",
   "saleStart": "2024-01-01T00:00:00Z",
   "saleEnd": "2024-01-07T00:00:00Z",
-  "hidden": true
+  "hidden": true,
+  "limitDate": "2024-01-07T00:00:00Z"
 }
 ```
 
@@ -938,7 +939,8 @@ type StoresDetailsGetResponse = StoreProfile;
   "storeName": "スーパーA",
   "address": "東京都渋谷区1-2-3",
   "iconUrl": "https://example.com/icon.png",
-  "introduction": "新鮮な食材をお届けします！"
+  "introduction": "新鮮な食材をお届けします！",
+  "reportsCount": 100
 }
 ```
 
@@ -959,8 +961,8 @@ type StoresDetailsItemsGetResponse = ItemViewForBuyer[];
     "name": "牛乳",
     "imageUrl": "https://example.com/milk.png",
     "price": {
-      "regular": "1000",
-      "discount": "980"
+      "regular": 1000,
+      "discount": 980
     }
   },
   {
@@ -979,7 +981,7 @@ type StoresDetailsItemsGetResponse = ItemViewForBuyer[];
   - `category`: カテゴリIDでの絞り込み
   - `price_max` / `price_min`: 価格（割引後・売値）の範囲指定
     - 検索条件に通常価格は扱わないのでこの命名で OK
-  - `sort`: 並び替えの指定（"price-low" or "price-hight"）
+  - `sort`: 並び替えの指定（"price-low" or "price-high"）
     - レスポンスの ItemViewForBuyer の要素を並び替えて返す
 - 関数名：GetItemsConditions
 
@@ -994,8 +996,8 @@ type ItemsGetResponse = ItemViewForBuyer[];
     "name": "牛乳",
     "imageUrl": "https://example.com/milk.png",
     "price": {
-      "regular": "1000",
-      "discount": "980"
+      "regular": 1000,
+      "discount": 980
     }
   },
   {
@@ -1020,8 +1022,8 @@ type ItemsDetailsGetResponse = ItemDetailForBuyer;
   "name": "牛乳",
   "imageUrl": "https://example.com/milk.png",
   "price": {
-    "regular": "1000",
-    "discount": "980"
+    "regular": 1000,
+    "discount": 980
   },
   "description": "賞味期限が近い牛乳です。",
   "store": {
@@ -1029,12 +1031,14 @@ type ItemsDetailsGetResponse = ItemDetailForBuyer;
     "storeName": "スーパーA",
     "address": "東京都渋谷区1-2-3",
     "iconUrl": "https://example.com/icon.png",
-    "introduction": "新鮮な食材をお届けします！"
+    "introduction": "新鮮な食材をお届けします！",
+    "reportsCount": 100
   },
   "janCode": "4901234567890",
   "category": "乳製品",
   "saleStart": "2024-01-01T00:00:00Z",
-  "saleEnd": "2024-01-07T00:00:00Z"
+  "saleEnd": "2024-01-07T00:00:00Z",
+  "limitDate": "2024-01-07T00:00:00Z"
 }
 ```
 
@@ -1120,8 +1124,3 @@ type UploadImagePostResponse = {
 - 静的ファイルで直接配信する想定(ほんとは API ではない)
 - レスポンスは画像ファイル
 - 関数名：GetUploadImage
-
-- 画像の削除
-- レスポンスは空
-- 権限の問題がめんどくさいので、実装しないか Admin の権限をつくるか
-- 関数名：DeleteUploadImageImageId

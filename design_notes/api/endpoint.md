@@ -28,12 +28,12 @@
 
 ## Items（出品物公開検索・詳細）
 
-- `/api/items?{conditions}`(`GET`):検索・一覧
+- `/api/items?{query}`(`GET`):検索・一覧
 - `/api/items/{item_id}`(`GET`): 詳細
 
 ## 冷蔵庫食材名の補完候補の取得
 
-- `/api/pantry/suggestions`(`GET`): 冷蔵庫食材名の補完候補の取得
+- `/api/pantry/suggestions?{query}`(`GET`): 冷蔵庫食材名の補完候補の取得
 
 ### カテゴリ一覧の取得
 
@@ -47,4 +47,3 @@
 
 - `/api/upload/image`(`POST`): 画像アップロード用
 - `/api/upload/image/{image_id}`(`GET`): 画像の取得
-- `/api/upload/image/{image_id}`(`DELETE`): 画像の削除
