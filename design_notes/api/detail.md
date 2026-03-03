@@ -22,7 +22,6 @@ type Password = string; // パスワードの文字列
 type JWT = string; // JWT トークンの文字列
 
 // ドメイン固有の型定義
-
 type UserId = UUID;
 type ItemId = UUID;
 type ImageId = UUID;
@@ -35,7 +34,11 @@ type Item = {
   id: ItemId;
   name: string;
   imageUrl: URL;
-  price: number;
+  price: {
+    // TODO: JSON スキーマを更新
+    regular: number;
+    discount: number;
+  };
 };
 
 // 購入者（Buyer）に関する型定義
@@ -95,7 +98,6 @@ type Buyer = {
 };
 
 // 冷蔵庫（Pantry）に関する型定義
-
 type PantryItem = {
   id: PantryItemId;
   name: string;
@@ -107,14 +109,19 @@ type Pantry = {
   items: PantryItem[];
 };
 
+type Material = {
+  name: string;
+  query: string;
+  inPantry: boolean;
+};
+
 // チャットメッセージ（ChatMessage）に関する型定義
-type Role = "system" | "assistant" | "user"; // systemはいらない？
+type Role = "assistant" | "user";
 
 type Recipe = {
   title: string;
   description: string;
-  materials: string[];
-  // TODO: 画像 URL、不足食材の情報なども
+  materials: material[];
 };
 
 type ChatMessage = {
@@ -154,6 +161,7 @@ type StoreProfile = {
   address: StoreAddress;
   iconUrl: StoreIconUrl;
   introduction: StoreIntroduction;
+  reportsCount: number;
 };
 
 // Item 型の拡張
@@ -171,6 +179,7 @@ type ItemDetailForBuyer = ItemViewForBuyer & {
   category: ItemCategory;
   saleStart: Timestamp;
   saleEnd: Timestamp;
+  limitDate: Timestamp; // TODO: JSON スキーマを更新
 };
 
 // 出品者向けの商品情報（自分の出品の一覧表示などで使用）
@@ -185,7 +194,11 @@ type ItemDetailForStore = ItemViewForStore & {
   category: ItemCategory;
   saleStart: Timestamp;
   saleEnd: Timestamp;
+  limitDate: Timestamp; // TODO: JSON スキーマを更新
 };
+
+// 検索時に使う並び替え公開鍵
+type sortKey = "price-low" | "price-hight";
 ```
 
 ## API Endpoints
@@ -400,23 +413,27 @@ type BuyersMeReportsGetResponse = Reports;
 ```ts
 type BuyersMeReportsPostRequest = {
   itemId: ItemId;
+  addPantry: boolean:
 };
 
 type BuyersMeReportsPostResponse = {
   itemId: ItemId;
+  addPantry: boolean:
   reportDate: Timestamp;
 };
 ```
 
 ```json
 {
-  "itemId": "123e4567-e89b-12d3-a456-426614174000"
+  "itemId": "123e4567-e89b-12d3-a456-426614174000",
+  "addPantry": true
 }
 ```
 
 ```json
 {
   "itemId": "123e4567-e89b-12d3-a456-426614174000",
+  "addPantry": true,
   "reportDate": "2024-01-01T12:00:00Z"
 }
 ```
@@ -449,10 +466,11 @@ type BuyersMePantryGetResponse = Pantry;
 - 冷蔵庫アイテムの追加
 - 内容がかぶったら何もしない
 - レスポンスは追加後の冷蔵庫情報
+- アイテムを追加する度にリクエストが走るので単数（配列ではない）
 - 関数名：PostBuyersMePantry
 
 ```ts
-type BuyersMePantryPostRequest = OmitId<PantryItem>[];
+type BuyersMePantryPostRequest = OmitId<PantryItem>;
 
 type BuyersMePantryPostResponse = Pantry;
 ```
@@ -502,7 +520,7 @@ type BuyersMeChatMessagesGetResponse = Chat;
         {
           "title": "簡単オムレツ",
           "description": "牛乳と卵を使った簡単なオムレツのレシピです。",
-          "materials": ["卵 2個", "牛乳 大さじ2", "塩 少々", "こしょう 少々"]
+          "materials": ["卵", "牛乳", "塩", "こしょう"]
         }
       ]
     },
@@ -546,18 +564,12 @@ type BuyersMeChatRecipesGetResponse = Recipes;
   {
     "title": "簡単オムレツ",
     "description": "牛乳と卵を使った簡単なオムレツのレシピです。",
-    "materials": ["卵 2個", "牛乳 大さじ2", "塩 少々", "こしょう 少々"]
+    "materials": ["卵", "牛乳", "塩", "こしょう"]
   },
   {
     "title": "フレンチトースト",
     "description": "牛乳と卵を使って手軽に作れるフレンチトーストです。",
-    "materials": [
-      "食パン 2枚",
-      "卵 1個",
-      "牛乳 100ml",
-      "砂糖 大さじ1",
-      "バター 少々"
-    ]
+    "materials": ["食パン", "卵", "牛乳", "砂糖", "バター"]
   }
 ]
 ```
@@ -809,8 +821,10 @@ type StoresDetailsItemsGetResponse = ItemViewForBuyer[];
 - クエリパラメータは以下に示す条件を想定
   - `q`: 商品名や説明文に対するキーワード検索
   - `category`: カテゴリIDでの絞り込み
-  - `price_max` / `price_min`: 価格の範囲指定
-    // TODO: クエリパラメータの条件は要検討
+  - `price_max` / `price_min`: 価格（割引後・売値）の範囲指定
+    - 検索条件に通常価格は扱わないのでこの命名で OK
+  - `sort`: 並び替えの指定（"price-low" or "price-hight"）
+    - レスポンスの ItemViewForBuyer の要素を並び替えて返す
 - 関数名：GetItemsConditions
 
 ```ts
