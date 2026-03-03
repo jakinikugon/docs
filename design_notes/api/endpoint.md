@@ -46,4 +46,3 @@
 ### 画像アップロード用
 
 - `/api/upload/image`(`POST`): 画像アップロード用
-- `/api/upload/image/{image_id}`(`GET`): 画像の取得

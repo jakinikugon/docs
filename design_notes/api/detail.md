@@ -336,13 +336,13 @@ Images(
 - ログインも同時に行う？
 
 ```ts
-type AuthRegisterRequest = {
+type AuthRegisterPostRequest = {
   email: Email;
   password: Password;
   accountType: AccountType;
 };
 
-type AuthRegisterResponse = {
+type AuthRegisterPostResponse = {
   userId: UserId;
   email: Email;
   accountType: AccountType;
@@ -371,12 +371,12 @@ type AuthRegisterResponse = {
 - Email と Password を受け取ってアクセストークンを発行する想定
 
 ```ts
-type AuthLoginRequest = {
+type AuthLoginPostRequest = {
   email: Email;
   password: Password;
 };
 
-type AuthLoginResponse = {
+type AuthLoginPostResponse = {
   accessToken: JWT;
   refreshToken: JWT;
 };
@@ -428,11 +428,11 @@ type AuthSessionGetResponse = {
 - リフレッシュトークンを受け取って新しいアクセストークンを発行する想定
 
 ```ts
-type AuthRefreshRequest = {
+type AuthRefreshPostRequest = {
   refreshToken: JWT;
 };
 
-type AuthRefreshResponse = {
+type AuthRefreshPostResponse = {
   accessToken: JWT;
   refreshToken: JWT;
 };
@@ -1117,10 +1117,3 @@ type UploadImagePostResponse = {
   "imageUrl": "https://example.com/image/123e4567-e89b-12d3-a456-426614174000.png"
 }
 ```
-
-#### GET `/api/upload/image/{image_id}`
-
-- 画像の取得
-- 静的ファイルで直接配信する想定(ほんとは API ではない)
-- レスポンスは画像ファイル
-- 関数名：GetUploadImage
