@@ -35,7 +35,6 @@ type Item = {
   name: string;
   imageUrl: URL;
   price: {
-    // TODO: JSON スキーマを更新
     regular: number;
     discount: number;
   };
@@ -387,20 +386,25 @@ type BuyersMeReportsGetResponse = Reports;
 
 ```json
 {
-    "totalCount": 10,
-    "totalDiscount": 5000,
-    "items": [
-        {
-            "item": {
-                "id": "123e4567-e89b-12d3-a456-426614174000",
-                "name": "牛乳",
-                "imageUrl": "https://example.com/milk.png",
-                "price": 200
-            },
-            "date": "2024-01-01T12:00:00Z"
-        },
-        ...
-    ]
+  "totalCount": 10,
+  "totalDiscount": 5000,
+  "items": [
+    {
+      "item": {
+        "id": "123e4567-e89b-12d3-a456-426614174000",
+        "name": "牛乳",
+        "imageUrl": "https://example.com/milk.png",
+        "price": {
+          "regular": "1000",
+          "discount": "980"
+        }
+      },
+      "date": "2024-01-01T12:00:00Z"
+    },
+    {
+      "item が続く": "..."
+    }
+  ]
 }
 ```
 
@@ -451,12 +455,14 @@ type BuyersMePantryGetResponse = Pantry;
 {
   "items": [
     {
-        "id": "123e4567-e89b-12d3-a456-426614174000",
-        "name": "牛乳",
-        "janCode": "4901234567890",
-        "category": "乳製品",
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "name": "牛乳",
+      "janCode": "4901234567890",
+      "category": "乳製品"
     },
-    ...
+    {
+      "item が続く": "..."
+    }
   ]
 }
 ```
@@ -506,8 +512,7 @@ type BuyersMeChatMessagesGetResponse = Chat;
 
 ```json
 {
-  "messages":
-  [
+  "messages": [
     {
       "role": "user",
       "content": "冷蔵庫に牛乳と卵があります。何かレシピを教えてください。",
@@ -524,7 +529,9 @@ type BuyersMeChatMessagesGetResponse = Chat;
         }
       ]
     },
-    ...
+    {
+      "message（role, content, recipes） が続く": "..."
+    }
   ]
 }
 ```
@@ -647,19 +654,24 @@ type StoresMeReportsGetResponse = Omit<Reports, "totalDiscount">;
 
 ```json
 {
-    "totalCount": 100,
-    "items": [
-        {
-            "item": {
-                "id": "123e4567-e89b-12d3-a456-426614174000",
-                "name": "牛乳",
-                "imageUrl": "https://example.com/milk.png",
-                "price": 200
-            },
-            "date": "2024-01-01T12:00:00Z"
-        },
-        ...
-    ]
+  "totalCount": 100,
+  "items": [
+    {
+      "item": {
+        "id": "123e4567-e89b-12d3-a456-426614174000",
+        "name": "牛乳",
+        "imageUrl": "https://example.com/milk.png",
+        "price": {
+          "regular": "1000",
+          "discount": "980"
+        }
+      },
+      "date": "2024-01-01T12:00:00Z"
+    },
+    {
+      "item が続く": "..."
+    }
+  ]
 }
 ```
 
@@ -674,14 +686,19 @@ type StoresMeItemsGetResponse = ItemViewForStore[];
 
 ```json
 [
-    {
-        "id": "123e4567-e89b-12d3-a456-426614174000",
-        "name": "牛乳",
-        "imageUrl": "https://example.com/milk.png",
-        "price": 200,
-        "hidden": false
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "牛乳",
+    "imageUrl": "https://example.com/milk.png",
+    "price": {
+      "regular": "1000",
+      "discount": "980"
     },
-    ...
+    "hidden": false
+  },
+  {
+    "item が続く": "..."
+  }
 ]
 ```
 
@@ -700,7 +717,10 @@ type StoresMeItemsPostResponse = ItemDetailForStore;
 {
   "name": "牛乳",
   "imageUrl": "https://example.com/milk.png",
-  "price": 200,
+  "price": {
+    "regular": "1000",
+    "discount": "980"
+  },
   "description": "賞味期限が近い牛乳です。",
   "janCode": "4901234567890",
   "category": "乳製品",
@@ -715,7 +735,10 @@ type StoresMeItemsPostResponse = ItemDetailForStore;
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "name": "牛乳",
   "imageUrl": "https://example.com/milk.png",
-  "price": 200,
+  "price": {
+    "regular": "1000",
+    "discount": "980"
+  },
   "description": "賞味期限が近い牛乳です。",
   "janCode": "4901234567890",
   "category": "乳製品",
@@ -756,7 +779,10 @@ type StoresMeItemsDetailsPatchResponse = ItemDetailForStore;
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "name": "牛乳",
   "imageUrl": "https://example.com/milk.png",
-  "price": 200,
+  "price": {
+    "regular": "1000",
+    "discount": "980"
+  },
   "description": "賞味期限が近い牛乳です。",
   "janCode": "4901234567890",
   "category": "乳製品",
@@ -803,13 +829,18 @@ type StoresDetailsItemsGetResponse = ItemViewForBuyer[];
 
 ```json
 [
-    {
-      "id": "123e4567-e89b-12d3-a456-426614174000",
-      "name": "牛乳",
-      "imageUrl": "https://example.com/milk.png",
-      "price": 200,
-    },
-    ...
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "牛乳",
+    "imageUrl": "https://example.com/milk.png",
+    "price": {
+      "regular": "1000",
+      "discount": "980"
+    }
+  },
+  {
+    "item が続く": "..."
+  }
 ]
 ```
 
@@ -833,13 +864,18 @@ type ItemsGetResponse = ItemViewForBuyer[];
 
 ```json
 [
-    {
-        "id": "123e4567-e89b-12d3-a456-426614174000",
-        "name": "牛乳",
-        "imageUrl": "https://example.com/milk.png",
-        "price": 200
-    },
-    ...
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "牛乳",
+    "imageUrl": "https://example.com/milk.png",
+    "price": {
+      "regular": "1000",
+      "discount": "980"
+    }
+  },
+  {
+    "item が続く": "..."
+  }
 ]
 ```
 
@@ -858,7 +894,10 @@ type ItemsDetailsGetResponse = ItemDetailForBuyer;
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "name": "牛乳",
   "imageUrl": "https://example.com/milk.png",
-  "price": 200,
+  "price": {
+    "regular": "1000",
+    "discount": "980"
+  },
   "description": "賞味期限が近い牛乳です。",
   "store": {
     "id": "123e4567-e89b-12d3-a456-426614174000",
@@ -888,12 +927,7 @@ type PantrySuggestionsGetResponse = string[];
 ```
 
 ```json
-[
-    "牛乳",
-    "牛肉",
-    "牛すじ",
-    ...
-],
+["牛乳", "牛肉", "牛すじ", "..."]
 ```
 
 ### カテゴリ一覧の取得
@@ -909,13 +943,7 @@ type CategoriesGetResponse = ItemCategory[];
 ```
 
 ```json
-[
-    "乳製品",
-    "肉類",
-    "野菜",
-    "果物",
-    ...
-]
+["乳製品", "肉類", "野菜", "果物", "..."]
 ```
 
 ### JAN コードから商品情報の取得
@@ -967,8 +995,6 @@ type UploadImagePostResponse = {
 - 静的ファイルで直接配信する想定(ほんとは API ではない)
 - レスポンスは画像ファイル
 - 関数名：GetUploadImage
-
-#### DELETE `/api/upload/image/{image_id}`
 
 - 画像の削除
 - レスポンスは空
