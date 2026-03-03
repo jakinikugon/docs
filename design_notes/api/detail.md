@@ -28,17 +28,6 @@ type ImageId = UUID;
 type PantryItemId = UUID;
 
 type AccountType = "buyer" | "store";
-type ItemCategory = string;
-
-type Item = {
-  id: ItemId;
-  name: string;
-  imageUrl: URL;
-  price: {
-    regular: number;
-    discount: number;
-  };
-};
 
 // 購入者（Buyer）に関する型定義
 type BuyerName = string;
@@ -82,57 +71,9 @@ type BuyerSetting = {
   prompt: string;
 };
 
-type Reports = {
-  totalCount: number;
-  totalDiscount: number;
-  items: {
-    item: Item;
-    date: Timestamp;
-  }[];
-};
-
 type Buyer = {
   id: UserId;
   setting: BuyerSetting;
-};
-
-// 冷蔵庫（Pantry）に関する型定義
-type PantryItem = {
-  id: PantryItemId;
-  name: string;
-  janCode: JanCode | null;
-  category: ItemCategory;
-};
-
-type Pantry = {
-  items: PantryItem[];
-};
-
-type Material = {
-  name: string;
-  query: string;
-  inPantry: boolean;
-};
-
-// チャットメッセージ（ChatMessage）に関する型定義
-type Role = "assistant" | "user";
-
-type Recipe = {
-  title: string;
-  description: string;
-  materials: material[];
-};
-
-type ChatMessage = {
-  role: Role;
-  content: string;
-  recipes: Recipe[] | null; // assistant のときのみレシピ提案がある想定
-};
-
-type Recipes = Recipe[];
-
-type Chat = {
-  messages: ChatMessage[];
 };
 
 // 店舗（Store）に関する型定義
@@ -161,6 +102,19 @@ type StoreProfile = {
   iconUrl: StoreIconUrl;
   introduction: StoreIntroduction;
   reportsCount: number;
+};
+
+// 商品 (Item) に関する型定義
+type ItemCategory = string;
+
+type Item = {
+  id: ItemId;
+  name: string;
+  imageUrl: URL;
+  price: {
+    regular: number;
+    discount: number;
+  };
 };
 
 // Item 型の拡張
@@ -197,7 +151,58 @@ type ItemDetailForStore = ItemViewForStore & {
 };
 
 // 検索時に使う並び替え公開鍵
-type sortKey = "price-low" | "price-hight";
+type SortKey = "price-low" | "price-high";
+
+// 冷蔵庫（Pantry）に関する型定義
+type PantryItem = {
+  id: PantryItemId;
+  name: string;
+  janCode: JanCode | null;
+  category: ItemCategory;
+};
+
+type Pantry = {
+  items: PantryItem[];
+};
+
+type Material = {
+  name: string;
+  query: string;
+  inPantry: boolean;
+};
+
+// チャットメッセージ（ChatMessage）に関する型定義
+type Role = "assistant" | "user";
+
+type Recipe = {
+  title: string;
+  description: string;
+  materials: Material[];
+};
+
+type ChatMessage = {
+  role: Role;
+  content: string;
+  recipes: Recipe[] | null; // assistant のときのみレシピ提案がある想定
+};
+
+type Recipes = Recipe[];
+
+type Chat = {
+  messages: ChatMessage[];
+};
+
+// 貢献度可視化に関する型定義
+type Reports = {
+  totalCount: number;
+  totalDiscount: number;
+  items: {
+    item: Item;
+    date: Timestamp;
+  }[];
+};
+
+
 ```
 
 ## SQLスキーマ
