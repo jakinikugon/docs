@@ -41,7 +41,7 @@
 
 ### JANコードから商品情報の取得
 
-- `/api/items/jan/{jan_code}`(`GET`): JANコードから商品情報の取得
+- `/api/jan/{jan_code}`(`GET`): JANコードから商品情報の取得
 
 ### 画像アップロード用
 

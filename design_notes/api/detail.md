@@ -13,16 +13,15 @@
 type OmitId<T> = Omit<T, "id">;
 
 // 汎用的な型定義
-type UUID = string; // UUID v4形式の文字列
-type URL = string; // URLの文字列
-type Timestamp = string; // ISO 8601形式の日時文字列
-type JanCode = string; // JANコードの文字列
+type UUID = string; // UUID v4 形式の文字列
+type URL = string; // URL の文字列
+type Timestamp = string; // ISO 8601 形式の日時文字列
+type JanCode = string; // JAN コードの文字列
 type Email = string; // メールアドレスの文字列
 type Password = string; // パスワードの文字列
-type JWT = string; // JWTトークンの文字列
+type JWT = string; // JWT トークンの文字列
 
 // ドメイン固有の型定義
-
 type UserId = UUID;
 type ItemId = UUID;
 type ImageId = UUID;
@@ -35,7 +34,10 @@ type Item = {
   id: ItemId;
   name: string;
   imageUrl: URL;
-  price: number;
+  price: {
+    regular: number;
+    discount: number;
+  };
 };
 
 // 購入者（Buyer）に関する型定義
@@ -95,7 +97,6 @@ type Buyer = {
 };
 
 // 冷蔵庫（Pantry）に関する型定義
-
 type PantryItem = {
   id: PantryItemId;
   name: string;
@@ -107,20 +108,25 @@ type Pantry = {
   items: PantryItem[];
 };
 
+type Material = {
+  name: string;
+  query: string;
+  inPantry: boolean;
+};
+
 // チャットメッセージ（ChatMessage）に関する型定義
-type Role = "system" | "assistant" | "user"; // systemはいらない？
+type Role = "assistant" | "user";
 
 type Recipe = {
   title: string;
   description: string;
-  materials: string[];
-  // TODO: 画像URL、不足食材の情報なども
+  materials: material[];
 };
 
 type ChatMessage = {
   role: Role;
   content: string;
-  recipes: Recipe[] | null; // assistantのときのみレシピ提案がある想定
+  recipes: Recipe[] | null; // assistant のときのみレシピ提案がある想定
 };
 
 type Recipes = Recipe[];
@@ -154,6 +160,7 @@ type StoreProfile = {
   address: StoreAddress;
   iconUrl: StoreIconUrl;
   introduction: StoreIntroduction;
+  reportsCount: number;
 };
 
 // Item 型の拡張
@@ -171,6 +178,7 @@ type ItemDetailForBuyer = ItemViewForBuyer & {
   category: ItemCategory;
   saleStart: Timestamp;
   saleEnd: Timestamp;
+  limitDate: Timestamp; // TODO: JSON スキーマを更新
 };
 
 // 出品者向けの商品情報（自分の出品の一覧表示などで使用）
@@ -185,7 +193,11 @@ type ItemDetailForStore = ItemViewForStore & {
   category: ItemCategory;
   saleStart: Timestamp;
   saleEnd: Timestamp;
+  limitDate: Timestamp; // TODO: JSON スキーマを更新
 };
+
+// 検索時に使う並び替え公開鍵
+type sortKey = "price-low" | "price-hight";
 ```
 
 ## SQLスキーマ
@@ -315,7 +327,7 @@ Images(
 #### POST `/api/auth/register`
 
 - ユーザー登録
-- EmailとPasswordを受け取ってユーザーを作成する想定
+- Email と Password を受け取ってユーザーを作成する想定
 - ログインも同時に行う？
 
 ```ts
@@ -351,7 +363,7 @@ type AuthRegisterResponse = {
 #### POST `/api/auth/login`
 
 - ログイン
-- EmailとPasswordを受け取ってアクセストークンを発行する想定
+- Email と Password を受け取ってアクセストークンを発行する想定
 
 ```ts
 type AuthLoginRequest = {
@@ -388,7 +400,7 @@ type AuthLoginResponse = {
 #### GET `/api/auth/session`
 
 - セッション情報の取得
-- アクセストークンからユーザーIDとアカウントタイプを返す
+- アクセストークンからユーザー ID とアカウントタイプを返す
 - 関数名：GetAuthSession
 
 ```ts
@@ -439,7 +451,7 @@ type AuthRefreshResponse = {
 #### GET `/api/buyers/me`
 
 - 購入者アカウント情報の取得
-- `Buyer`型のレスポンス
+- `Buyer` 型のレスポンス
 - 関数名：GetBuyersMe
 
 ```ts
@@ -460,7 +472,7 @@ type BuyersMeGetResponse = Buyer;
 #### PATCH `/api/buyers/me`
 
 - 購入者アカウント情報の更新
-- リクエストボディは`BuyerSetting`型
+- リクエストボディは `BuyerSetting` 型
 - 関数名：PatchBuyersMe
 
 ```ts
@@ -494,20 +506,25 @@ type BuyersMeReportsGetResponse = Reports;
 
 ```json
 {
-    "totalCount": 10,
-    "totalDiscount": 5000,
-    "items": [
-        {
-            "item": {
-                "id": "123e4567-e89b-12d3-a456-426614174000",
-                "name": "牛乳",
-                "imageUrl": "https://example.com/milk.png",
-                "price": 200
-            },
-            "date": "2024-01-01T12:00:00Z"
-        },
-        ...
-    ]
+  "totalCount": 10,
+  "totalDiscount": 5000,
+  "items": [
+    {
+      "item": {
+        "id": "123e4567-e89b-12d3-a456-426614174000",
+        "name": "牛乳",
+        "imageUrl": "https://example.com/milk.png",
+        "price": {
+          "regular": "1000",
+          "discount": "980"
+        }
+      },
+      "date": "2024-01-01T12:00:00Z"
+    },
+    {
+      "item が続く": "..."
+    }
+  ]
 }
 ```
 
@@ -515,28 +532,32 @@ type BuyersMeReportsGetResponse = Reports;
 
 - 購入報告の作成
 - 関数名：PostBuyersMeReports
-- レスポンスは作成された商品IDと報告日時
+- レスポンスは作成された商品 ID と報告日時
 
 ```ts
 type BuyersMeReportsPostRequest = {
   itemId: ItemId;
+  addPantry: boolean:
 };
 
 type BuyersMeReportsPostResponse = {
   itemId: ItemId;
+  addPantry: boolean:
   reportDate: Timestamp;
 };
 ```
 
 ```json
 {
-  "itemId": "123e4567-e89b-12d3-a456-426614174000"
+  "itemId": "123e4567-e89b-12d3-a456-426614174000",
+  "addPantry": true
 }
 ```
 
 ```json
 {
   "itemId": "123e4567-e89b-12d3-a456-426614174000",
+  "addPantry": true,
   "reportDate": "2024-01-01T12:00:00Z"
 }
 ```
@@ -554,12 +575,14 @@ type BuyersMePantryGetResponse = Pantry;
 {
   "items": [
     {
-        "id": "123e4567-e89b-12d3-a456-426614174000",
-        "name": "牛乳",
-        "janCode": "4901234567890",
-        "category": "乳製品",
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "name": "牛乳",
+      "janCode": "4901234567890",
+      "category": "乳製品"
     },
-    ...
+    {
+      "item が続く": "..."
+    }
   ]
 }
 ```
@@ -569,10 +592,11 @@ type BuyersMePantryGetResponse = Pantry;
 - 冷蔵庫アイテムの追加
 - 内容がかぶったら何もしない
 - レスポンスは追加後の冷蔵庫情報
+- アイテムを追加する度にリクエストが走るので単数（配列ではない）
 - 関数名：PostBuyersMePantry
 
 ```ts
-type BuyersMePantryPostRequest = OmitId<PantryItem>[];
+type BuyersMePantryPostRequest = OmitId<PantryItem>;
 
 type BuyersMePantryPostResponse = Pantry;
 ```
@@ -608,8 +632,7 @@ type BuyersMeChatMessagesGetResponse = Chat;
 
 ```json
 {
-  "messages":
-  [
+  "messages": [
     {
       "role": "user",
       "content": "冷蔵庫に牛乳と卵があります。何かレシピを教えてください。",
@@ -622,11 +645,13 @@ type BuyersMeChatMessagesGetResponse = Chat;
         {
           "title": "簡単オムレツ",
           "description": "牛乳と卵を使った簡単なオムレツのレシピです。",
-          "materials": ["卵 2個", "牛乳 大さじ2", "塩 少々", "こしょう 少々"]
+          "materials": ["卵", "牛乳", "塩", "こしょう"]
         }
       ]
     },
-    ...
+    {
+      "message（role, content, recipes） が続く": "..."
+    }
   ]
 }
 ```
@@ -666,18 +691,12 @@ type BuyersMeChatRecipesGetResponse = Recipes;
   {
     "title": "簡単オムレツ",
     "description": "牛乳と卵を使った簡単なオムレツのレシピです。",
-    "materials": ["卵 2個", "牛乳 大さじ2", "塩 少々", "こしょう 少々"]
+    "materials": ["卵", "牛乳", "塩", "こしょう"]
   },
   {
     "title": "フレンチトースト",
     "description": "牛乳と卵を使って手軽に作れるフレンチトーストです。",
-    "materials": [
-      "食パン 2枚",
-      "卵 1個",
-      "牛乳 100ml",
-      "砂糖 大さじ1",
-      "バター 少々"
-    ]
+    "materials": ["食パン", "卵", "牛乳", "砂糖", "バター"]
   }
 ]
 ```
@@ -755,19 +774,24 @@ type StoresMeReportsGetResponse = Omit<Reports, "totalDiscount">;
 
 ```json
 {
-    "totalCount": 100,
-    "items": [
-        {
-            "item": {
-                "id": "123e4567-e89b-12d3-a456-426614174000",
-                "name": "牛乳",
-                "imageUrl": "https://example.com/milk.png",
-                "price": 200
-            },
-            "date": "2024-01-01T12:00:00Z"
-        },
-        ...
-    ]
+  "totalCount": 100,
+  "items": [
+    {
+      "item": {
+        "id": "123e4567-e89b-12d3-a456-426614174000",
+        "name": "牛乳",
+        "imageUrl": "https://example.com/milk.png",
+        "price": {
+          "regular": "1000",
+          "discount": "980"
+        }
+      },
+      "date": "2024-01-01T12:00:00Z"
+    },
+    {
+      "item が続く": "..."
+    }
+  ]
 }
 ```
 
@@ -782,21 +806,25 @@ type StoresMeItemsGetResponse = ItemViewForStore[];
 
 ```json
 [
-    {
-        "id": "123e4567-e89b-12d3-a456-426614174000",
-        "name": "牛乳",
-        "imageUrl": "https://example.com/milk.png",
-        "price": 200,
-        "hidden": false
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "牛乳",
+    "imageUrl": "https://example.com/milk.png",
+    "price": {
+      "regular": "1000",
+      "discount": "980"
     },
-    ...
+    "hidden": false
+  },
+  {
+    "item が続く": "..."
+  }
 ]
 ```
 
 #### POST `/api/stores/me/items`
 
 - 自店舗の出品の作成
-
 - 関数名：PostStoresMeItems
 
 ```ts
@@ -809,7 +837,10 @@ type StoresMeItemsPostResponse = ItemDetailForStore;
 {
   "name": "牛乳",
   "imageUrl": "https://example.com/milk.png",
-  "price": 200,
+  "price": {
+    "regular": "1000",
+    "discount": "980"
+  },
   "description": "賞味期限が近い牛乳です。",
   "janCode": "4901234567890",
   "category": "乳製品",
@@ -824,7 +855,10 @@ type StoresMeItemsPostResponse = ItemDetailForStore;
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "name": "牛乳",
   "imageUrl": "https://example.com/milk.png",
-  "price": 200,
+  "price": {
+    "regular": "1000",
+    "discount": "980"
+  },
   "description": "賞味期限が近い牛乳です。",
   "janCode": "4901234567890",
   "category": "乳製品",
@@ -865,7 +899,10 @@ type StoresMeItemsDetailsPatchResponse = ItemDetailForStore;
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "name": "牛乳",
   "imageUrl": "https://example.com/milk.png",
-  "price": 200,
+  "price": {
+    "regular": "1000",
+    "discount": "980"
+  },
   "description": "賞味期限が近い牛乳です。",
   "janCode": "4901234567890",
   "category": "乳製品",
@@ -912,13 +949,18 @@ type StoresDetailsItemsGetResponse = ItemViewForBuyer[];
 
 ```json
 [
-    {
-      "id": "123e4567-e89b-12d3-a456-426614174000",
-      "name": "牛乳",
-      "imageUrl": "https://example.com/milk.png",
-      "price": 200,
-    },
-    ...
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "牛乳",
+    "imageUrl": "https://example.com/milk.png",
+    "price": {
+      "regular": "1000",
+      "discount": "980"
+    }
+  },
+  {
+    "item が続く": "..."
+  }
 ]
 ```
 
@@ -930,8 +972,10 @@ type StoresDetailsItemsGetResponse = ItemViewForBuyer[];
 - クエリパラメータは以下に示す条件を想定
   - `q`: 商品名や説明文に対するキーワード検索
   - `category`: カテゴリIDでの絞り込み
-  - `price_max` / `price_min`: 価格の範囲指定
-    // TODO: クエリパラメータの条件は要検討
+  - `price_max` / `price_min`: 価格（割引後・売値）の範囲指定
+    - 検索条件に通常価格は扱わないのでこの命名で OK
+  - `sort`: 並び替えの指定（"price-low" or "price-hight"）
+    - レスポンスの ItemViewForBuyer の要素を並び替えて返す
 - 関数名：GetItemsConditions
 
 ```ts
@@ -940,20 +984,25 @@ type ItemsGetResponse = ItemViewForBuyer[];
 
 ```json
 [
-    {
-        "id": "123e4567-e89b-12d3-a456-426614174000",
-        "name": "牛乳",
-        "imageUrl": "https://example.com/milk.png",
-        "price": 200
-    },
-    ...
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "牛乳",
+    "imageUrl": "https://example.com/milk.png",
+    "price": {
+      "regular": "1000",
+      "discount": "980"
+    }
+  },
+  {
+    "item が続く": "..."
+  }
 ]
 ```
 
 #### GET `/api/items/{item_id}`
 
 - 出品物の詳細の取得
-- 非公開の出品に対しては404を返す
+- 非公開の出品に対しては 404 を返す
 - 関数名：GetItemsItemId
 
 ```ts
@@ -965,7 +1014,10 @@ type ItemsDetailsGetResponse = ItemDetailForBuyer;
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "name": "牛乳",
   "imageUrl": "https://example.com/milk.png",
-  "price": 200,
+  "price": {
+    "regular": "1000",
+    "discount": "980"
+  },
   "description": "賞味期限が近い牛乳です。",
   "store": {
     "id": "123e4567-e89b-12d3-a456-426614174000",
@@ -986,7 +1038,7 @@ type ItemsDetailsGetResponse = ItemDetailForBuyer;
 #### GET `/api/pantry/suggestions?{query}`
 
 - 冷蔵庫食材名の補完候補の取得
-- クエリパラメータは`q`を想定(例: `q=牛`など)
+- クエリパラメータは `q` を想定(例: `q=牛` など)
 - レスポンスは以下のような形式
 - 関数名：GetPantrySuggestionsQuery
 
@@ -995,12 +1047,7 @@ type PantrySuggestionsGetResponse = string[];
 ```
 
 ```json
-[
-    "牛乳",
-    "牛肉",
-    "牛すじ",
-    ...
-],
+["牛乳", "牛肉", "牛すじ", "..."]
 ```
 
 ### カテゴリ一覧の取得
@@ -1016,16 +1063,10 @@ type CategoriesGetResponse = ItemCategory[];
 ```
 
 ```json
-[
-    "乳製品",
-    "肉類",
-    "野菜",
-    "果物",
-    ...
-]
+["乳製品", "肉類", "野菜", "果物", "..."]
 ```
 
-### JANコードから商品情報の取得
+### JAN コードから商品情報の取得
 
 #### GET `/api/jan/{jan_code}`
 
@@ -1051,7 +1092,7 @@ type JanGetResponse = {
 #### POST `/api/upload/image`
 
 - 画像のアップロード
-- リクエストはmultipart/form-dataで画像ファイルを送信
+- リクエストは multipart/form-data で画像ファイルを送信
 - 関数名：PostUploadImage
 
 ```ts
@@ -1071,13 +1112,11 @@ type UploadImagePostResponse = {
 #### GET `/api/upload/image/{image_id}`
 
 - 画像の取得
-- 静的ファイルで直接配信する想定(ほんとはAPIではない)
+- 静的ファイルで直接配信する想定(ほんとは API ではない)
 - レスポンスは画像ファイル
 - 関数名：GetUploadImage
 
-#### DELETE `/api/upload/image/{image_id}`
-
 - 画像の削除
 - レスポンスは空
-- 権限の問題がめんどくさいので、実装しないかAdminの権限をつくるか
+- 権限の問題がめんどくさいので、実装しないか Admin の権限をつくるか
 - 関数名：DeleteUploadImageImageId
