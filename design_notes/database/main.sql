@@ -5,292 +5,271 @@
 -- - リフレッシュトークンは上書きで運用（1ユーザー1行）
 -- ==================================================== --
 
--- ------ enums ------ --
+-- ------------ enums ------------ --
 
-CREATE TYPE "account_type_enum" AS ENUM ('buyer', 'store');
-CREATE TYPE "role_enum" AS ENUM ('user', 'assistant');
+CREATE TYPE account_type_enum AS ENUM ('buyer', 'store');
+CREATE TYPE role_enum AS ENUM ('user', 'assistant');
 
--- Users
-
-
-CREATE TABLE "Users" (
-    -- ユーザー ID（UserId）
-    "user_id" uuid PRIMARY KEY,
-
-    -- メールアドレス（Email）
-    "email" varchar(100) NOT NULL UNIQUE,
-
-    -- アカウントの種別（buyer か store）
-    "account_type" account_type_enum NOT NULL,
-
-    -- 作成時刻
-    "created_at" timestamp NOT NULL DEFAULT now(),
-
-    -- 更新時刻
-    "updated_at" timestamp NOT NULL DEFAULT now()
+-- detail.md の Allergen 定義（8 + 20 = 28 個）
+CREATE TYPE "allergen_enum" AS ENUM (
+    'egg', 'milk', 'wheat', 'buckwheat', 'peanut', 'shrimp', 'crab', 'walnut',
+    'abalone', 'squid', 'salmon_roe', 'orange', 'cashew_nut', 'kiwi', 'beef',
+    'sesame', 'salmon', 'mackerel', 'soybean', 'chicken', 'banana', 'pork',
+    'macadamia_nut', 'peach', 'yam', 'apple', 'gelatin', 'almond'
 );
 
--- 少なくとも検索で使う範囲は索引を作成しておく
-CREATE INDEX "idx_users_email" ON "Users" ("email");
+-- ------------ Users / Auth ------------ --
+-- buyer と store を共通の Users にまとめる
+CREATE TABLE "users" (
+    "user_id" uuid PRIMARY KEY,
+    "email" varchar(254) NOT NULL UNIQUE,
+    "account_type" "account_type_enum" NOT NULL,
+    "created_at" timestamptz NOT NULL DEFAULT now(),
+    "updated_at" timestamptz NOT NULL DEFAULT now()
+);
 
--- refresh token の状態
-CREATE TYPE refresh_token_status_enum AS ENUM ('active', 'revoked', 'rotated');
+-- POST /api/auth/login が email を使うため、索引を生成しておく
+CREATE INDEX "idx_users_email" ON "users" ("email");
 
-CREATE TABLE "RefreshTokens" (
-    -- JWT の jti（トークンID, UUID）
-    "token_id" uuid PRIMARY KEY,
+-- buyer/store で分ける場面が多いため
+CREATE INDEX "idx_users_account_type" ON "users" ("account_type");
 
-    -- 所有者
-    "user_id" uuid NOT NULL REFERENCES "Users" ("user_id") ON DELETE CASCADE,
+-- ユーザーのクレデンシャル
+CREATE TABLE "user_credentials" (
+    "refresh_token_id" uuid PRIMARY KEY,
+    "user_id" uuid NOT NULL REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "password_hash" text NOT NULL, -- パスワードはハッシュのみ
+    "created_at" timestamptz NOT NULL DEFAULT now(),
+    "updated_at" timestamptz NOT NULL DEFAULT now()
+);
 
-    -- refresh token のハッシュ
+-- リフレッシュトークンは「refresh成功時に上書き」「古いのは削除」方針
+-- MVPとして 1ユーザー1トークンに固定（ローテーションで UPDATE）
+CREATE TABLE "user_refresh_tokens" (
+    "refresh_token_id" uuid PRIMARY KEY,
+    "user_id" uuid NOT NULL REFERENCES "users" ("user_id") ON DELETE CASCADE,
+
     "token_hash" text NOT NULL UNIQUE,
 
-    -- 発行時刻
-    "issued_at" timestamp NOT NULL DEFAULT now(),
-
-    -- 失効時刻（exp）
-    "expires_at" timestamp NOT NULL,
-
-    -- 状態
-    "status" refresh_token_status_enum NOT NULL DEFAULT 'active',
-
-    -- 失効処理した時刻（logout / 不正検知など）
-    "revoked_at" timestamp,
-
-    -- rotation で置き換えた先の token_id
-    "replaced_by_token_id" uuid REFERENCES "RefreshTokens" ("token_id")
+    "expires_at" timestamptz NOT NULL,
+    "revoked_at" timestamptz, -- 失効管理（ログアウト、ローテーション、手動失効など）
+    "created_at" timestamptz NOT NULL DEFAULT now(),
+    "updated_at" timestamptz NOT NULL DEFAULT now()
 );
 
--- 典型クエリのための索引
-CREATE INDEX "idx_refresh_tokens_user_id" ON "RefreshTokens" ("user_id");
-CREATE INDEX "idx_refresh_tokens_expires_at" ON "RefreshTokens" ("expires_at");
-CREATE INDEX "idx_refresh_tokens_status" ON "RefreshTokens" ("status");
+-- ユーザーごとの有効トークン検索をするため
+CREATE INDEX "idx_user_refresh_tokens_user" ON "user_refresh_tokens" ("user_id");
 
--- UsersCredentials
+-- 有効（revoked_at IS NULL）だけ引く用途が多い
+CREATE INDEX "idx_user_refresh_tokens_user_active"
+ON "user_refresh_tokens" ("user_id") WHERE "revoked_at" IS NULL;
 
-CREATE TABLE "UsersCredentials" (
-    -- ユーザー ID（UserId）
+-- ---------- Profiles / Settings ----------
+-- Buyer.setting: buyerName, allergens[], prompt
+CREATE TABLE "buyer_settings" (
     "user_id" uuid PRIMARY KEY
-    REFERENCES "Users" ("user_id") -- 列に対して 参照整合性制約 を付与して FK にする
-    ON DELETE CASCADE, -- Users を消したら資格情報も消す
-
-    -- パスワードハッシュ（可変長なので text）
-    "password_hash" text NOT NULL
-);
-
--- BuyersProfiles
-
-CREATE TYPE allergen_enum AS ENUM (
-    'egg', 'milk', 'wheat', 'buckwheat', 'peanut', 'shrimp', 'crab', 'walnut',
-    'abalone', 'squid', 'salmon_roe', 'orange', 'cashew_nut', 'kiwi', 'beef', 'sesame',
-    'salmon', 'mackerel', 'soybean', 'chicken', 'banana', 'pork', 'macadamia_nut',
-    'peach', 'yam', 'apple', 'gelatin', 'almond'
-);
-
-CREATE TABLE "BuyersProfiles" (
-    -- ユーザー ID（UserId）
-    "user_id" uuid PRIMARY KEY REFERENCES "Users" ("user_id") ON DELETE CASCADE,
-
-    -- buyer の名前
+    REFERENCES "users" ("user_id") ON DELETE CASCADE,
     "buyer_name" varchar(60) NOT NULL,
-
-    -- アレルギー食品
-    -- 空配列がデフォルトのほうが扱いやすいので NOT NULL + DEFAULT を付ける
-    -- :: 以降は型（キャスト）
-    "allergens" allergen_enum [] NOT NULL DEFAULT '{}'::allergen_enum []
+    "allergens" "allergen_enum" [] NOT NULL DEFAULT '{}'::"allergen_enum" [],
+    "prompt" text NOT NULL DEFAULT '',
+    "created_at" timestamptz NOT NULL DEFAULT now(),
+    "updated_at" timestamptz NOT NULL DEFAULT now()
 );
 
--- StoreProfiles
-
-CREATE TABLE "StoreProfiles" (
-    -- ユーザー ID（UserId）
-    "user_id" uuid PRIMARY KEY REFERENCES "Users" ("user_id") ON DELETE CASCADE,
-
-    -- store の名前
-    "store_name" varchar(60) NOT NULL,
-
-    -- store の住所
-    "address" text,
-
-    -- アイコン（画像）
-    "icon_url" text,
-
-    -- お店の紹介
-    "introduction" text,
-
-    -- 救済カウント
-    "reportsCount" integer NOT NULL DEFAULT 0 CHECK ("price_regular" >= 0)
+-- Store.setting: storeName, address, iconUrl, introduction
+CREATE TABLE "store_settings" (
+    "user_id" uuid PRIMARY KEY
+    REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "store_name" varchar(80) NOT NULL,
+    "address" text NOT NULL DEFAULT '',
+    "icon_url" text NOT NULL DEFAULT '',
+    "introduction" text NOT NULL DEFAULT '',
+    "created_at" timestamptz NOT NULL DEFAULT now(),
+    "updated_at" timestamptz NOT NULL DEFAULT now()
 );
 
--- StoreItems
+-- ---------- Categories ----------
+-- /api/categories は ItemCategory(string) の配列を返す
+-- DB都合上は参照整合性を取りたくなるのでテーブル化（MVP: name を返すだけでも可）
+CREATE TABLE "categories" (
+    "category_id" bigserial PRIMARY KEY,
+    "name" text NOT NULL UNIQUE
+);
 
-CREATE TABLE "StoreItems" (
-    -- 商品の ID（ItemId）
+-- ---------- Images ----------
+-- /api/upload/image: ImageId と imageUrl を返す
+CREATE TABLE "images" (
+    "image_id" uuid PRIMARY KEY,
+    "image_url" text NOT NULL,
+    "uploader_user_id" uuid NOT NULL
+    REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "created_at" timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX "idx_images_uploader" ON "images" ("uploader_user_id");
+
+-- ---------- Items (Store listings) ----------
+-- Item + ItemDetailFor(Store/Buyer) を正規化して保持
+-- UI/仕様: 出品の hidden（非公開）や、saleStart/saleEnd/limitDate、
+-- 価格、JAN、アレルギー等
+CREATE TABLE "store_items" (
     "item_id" uuid PRIMARY KEY,
+    "store_user_id" uuid NOT NULL
+    REFERENCES "users" ("user_id") ON DELETE CASCADE,
 
-    -- 追加したユーザーの ID（UserId）
-    -- なお、store アカウントの user_id が入る
-    "user_id" uuid NOT NULL REFERENCES "Users" ("user_id") ON DELETE CASCADE,
+    "name" varchar(120) NOT NULL,
+    "description" text NOT NULL DEFAULT '',
 
-    -- 商品名
-    "item_name" varchar(100) NOT NULL,
+    "image_url" text NOT NULL DEFAULT '',
 
-    -- 商品説明
-    "description" text,
-
-    -- 商品のアイコン（URL は可変長なので text）
-    "image_url" text,
-
-    -- 商品の通常価格（0 円以上なので制約をつける）
     "price_regular" integer NOT NULL CHECK ("price_regular" >= 0),
-
-    -- 商品の割引価格
     "price_discount" integer NOT NULL CHECK ("price_discount" >= 0),
 
-    -- JAN コード（固定長で運用する、正規表現で 13 桁の数字のみにする）
-    "jan_code" varchar(13) CHECK ("jan_code" IS NULL OR "jan_code" ~ '^[0-9]{8,14}$'),
+    -- 8〜14桁想定（仕様側は string）。JAN の揺れを許すなら text にしてもよい
+    "jan_code" varchar(14),
+    "category_id" bigint
+    REFERENCES "categories" ("category_id") ON DELETE SET NULL,
 
-    -- カテゴリ
-    "category" text,
+    "sale_start" timestamptz NOT NULL,
+    "sale_end" timestamptz NOT NULL,
+    "limit_date" timestamptz NOT NULL,
 
-    -- セール開始日
-    "sale_start" timestamp DEFAULT now(),
+    "hidden" boolean NOT NULL DEFAULT FALSE,
 
-    -- セール終了日
-    "sale_end" timestamp NOT NULL DEFAULT now(),
+    "created_at" timestamptz NOT NULL DEFAULT now(),
+    "updated_at" timestamptz NOT NULL DEFAULT now(),
 
-    -- 消費/賞味期限
-    "limit_date" timestamp DEFAULT now(),
-
-    -- 出品時刻
-    "created_at" timestamp NOT NULL DEFAULT now()
+    CONSTRAINT "chk_sale_range" CHECK ("sale_start" <= "sale_end"),
+    CONSTRAINT "chk_jan_digits" CHECK (
+        "jan_code" IS NULL OR "jan_code" ~ '^[0-9]{8,14}$'
+    )
 );
 
-CREATE INDEX "idx_store_items_user_id" ON "StoreItems" ("user_id");
-CREATE INDEX "idx_store_items_item_name" ON "StoreItems" ("item_name");
-CREATE INDEX "idx_store_items_price_regular" ON "StoreItems" ("price_regular");
-CREATE INDEX "idx_store_items_price_discount" ON "StoreItems" ("price_discount");
-CREATE INDEX "idx_store_items_category" ON "StoreItems" ("category");
-CREATE INDEX "idx_store_items_sale_start" ON "StoreItems" ("sale_start");
-CREATE INDEX "idx_store_items_sale_end" ON "StoreItems" ("sale_end");
+CREATE INDEX "idx_store_items_store" ON "store_items" ("store_user_id");
+CREATE INDEX "idx_store_items_hidden" ON "store_items" ("hidden");
+CREATE INDEX "idx_store_items_price_discount" ON "store_items" ("price_discount");
+CREATE INDEX "idx_store_items_sale_end" ON "store_items" ("sale_end");
+CREATE INDEX "idx_store_items_category" ON "store_items" ("category_id");
 
--- PantryItems
-
-CREATE TABLE "PantryItems" (
-    -- 食品（商品）の ID（PantryItemId）
-    "item_id" uuid PRIMARY KEY,
-
-    -- ユーザーID（UserId）
-    "user_id" uuid NOT NULL
-    REFERENCES "Users" ("user_id")
-    ON DELETE CASCADE,
-
-    -- 食品名
-    "item_name" varchar(100) NOT NULL,
-
-    -- janコード（JanCode）
-    "jan_code" varchar(13) CHECK ("jan_code" IS NULL OR "jan_code" ~ '^[0-9]{8,14}$'),
-
-    -- 食品のカテゴリ（ItemCategory は string 扱いなので text）
-    "category" text,
-
-    -- 追加した時間
-    "created_at" timestamp NOT NULL DEFAULT now()
+-- 出品物に紐づくアレルギー（出品フォームにある）
+CREATE TABLE "store_item_allergens" (
+    "item_id" uuid NOT NULL REFERENCES "store_items" ("item_id") ON DELETE CASCADE,
+    "allergen" "allergen_enum" NOT NULL,
+    PRIMARY KEY ("item_id", "allergen")
 );
 
-CREATE INDEX "idx_pantry_items_user_id" ON "PantryItems" ("user_id");
-CREATE INDEX "idx_pantry_items_item_name" ON "PantryItems" ("item_name");
-CREATE INDEX "idx_pantry_items_category" ON "PantryItems" ("category");
+-- ---------- Pantry ----------
+-- buyer の冷蔵庫（PantryItem: id, name, janCode|null, category(string)）
+-- category は UI/検索都合で categories に寄せる（NULLも許容）
+CREATE TABLE "pantry_items" (
+    "pantry_item_id" uuid PRIMARY KEY,
+    "buyer_user_id" uuid NOT NULL
+    REFERENCES "users" ("user_id") ON DELETE CASCADE,
 
--- ChatMessages
+    "name" varchar(120) NOT NULL,
+    "jan_code" varchar(14),
+    "category_id" bigint
+    REFERENCES "categories" ("category_id") ON DELETE SET NULL,
 
--- 会話ロール
-CREATE TYPE role_type_enum AS ENUM ('user', 'assistant');
+    "created_at" timestamptz NOT NULL DEFAULT now(),
 
-CREATE TABLE "ChatMessages" (
-    -- 各会話の ID
+    CONSTRAINT "chk_pantry_jan_digits" CHECK (
+        "jan_code" IS NULL OR "jan_code" ~ '^[0-9]{8,14}$'
+    )
+);
+
+-- 「内容がかぶったら何もしない」を DB 制約で担保（ざっくり）
+-- jan_code が NULL の場合は name で重複排除、など厳密化したいなら別途ユニーク戦略が要る
+CREATE UNIQUE INDEX "uq_pantry_items_buyer_name_jan"
+ON "pantry_items" ("buyer_user_id", "name", "jan_code");
+
+CREATE INDEX "idx_pantry_items_buyer" ON "pantry_items" ("buyer_user_id");
+
+-- ---------- Purchase Reports ----------
+-- buyer が itemId を報告し、addPantry の有無がある
+-- store 側は「自店舗の報告された購入履歴」を見る
+CREATE TABLE "purchase_reports" (
+    "report_id" bigserial PRIMARY KEY,
+    "buyer_user_id" uuid NOT NULL
+    REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "item_id" uuid NOT NULL
+    REFERENCES "store_items" ("item_id") ON DELETE CASCADE,
+    "add_pantry" boolean NOT NULL DEFAULT FALSE,
+    "reported_at" timestamptz NOT NULL DEFAULT now(),
+
+    -- 同一buyerが同一itemを何度も報告するのを防ぐ（MVP想定）
+    CONSTRAINT "uq_purchase_reports_buyer_item" UNIQUE ("buyer_user_id", "item_id")
+);
+
+CREATE INDEX "idx_purchase_reports_buyer" ON "purchase_reports" ("buyer_user_id");
+CREATE INDEX "idx_purchase_reports_item" ON "purchase_reports" ("item_id");
+
+-- ---------- Chat ----------
+-- buyer の 1セッションのみ（ただし永続化は messages を user_id で束ねれば足りる）
+CREATE TABLE "chat_messages" (
     "message_id" uuid PRIMARY KEY,
-
-    -- ユーザー ID（UserId）
-    "user_id" uuid NOT NULL REFERENCES "Users" ("user_id") ON DELETE CASCADE,
-
-    -- 会話のロール
-    "role" role_type_enum NOT NULL,
-
-    -- 会話本文
-    "content" text,
-
-    -- タイトル
-    "recipe_title" varchar(100),
-
-    -- 説明
-    "recipe_description" text,
-
-    -- 食材の配列
-    "recipe_materials" text []
+    "buyer_user_id" uuid NOT NULL
+    REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "role" "role_enum" NOT NULL,
+    "content" text NOT NULL DEFAULT '',
+    "created_at" timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX "idx_chat_messages_user_id" ON "ChatMessages" ("user_id");
+CREATE INDEX "idx_chat_messages_buyer" ON "chat_messages" ("buyer_user_id");
+CREATE INDEX "idx_chat_messages_created_at" ON "chat_messages" ("created_at");
 
--- ChatRecipes
-
-CREATE TABLE "ChatRecipes" (
-    -- レシピ ID（連番）
-    "recipe_id" serial PRIMARY KEY,
-
-    -- ユーザー ID（UserId）
-    "user_id" uuid REFERENCES "Users" ("user_id") ON DELETE SET NULL,
-
-    -- 各会話のID
-    "message_id" uuid REFERENCES "ChatMessages" ("message_id") ON DELETE CASCADE,
-
-    -- レシピタイトル
-    "title" varchar(100),
-
-    -- レシピ説明
-    "description" text
+-- assistant メッセージに recipe[] が付く
+CREATE TABLE "chat_recipes" (
+    "recipe_id" uuid PRIMARY KEY,
+    "message_id" uuid NOT NULL
+    REFERENCES "chat_messages" ("message_id") ON DELETE CASCADE,
+    "title" varchar(120) NOT NULL,
+    "description" text NOT NULL DEFAULT ''
 );
 
-CREATE INDEX "idx_chat_recipes_user_id" ON "ChatRecipes" ("user_id");
-CREATE INDEX "idx_chat_recipes_message_id" ON "ChatRecipes" ("message_id");
+CREATE INDEX "idx_chat_recipes_message" ON "chat_recipes" ("message_id");
 
--- PurchaseReports
-
-CREATE TABLE "PurchaseReports" (
-    -- 購入報告 ID（連番）
-    "purchase_id" integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-
-    -- 報告したユーザー ID
-    "user_id" uuid NOT NULL REFERENCES "Users" ("user_id") ON DELETE CASCADE,
-
-    -- 購入された商品（ItemId）
-    "item_id" uuid NOT NULL REFERENCES "StoreItems" ("item_id") ON DELETE CASCADE,
-
-    -- 報告された時間
-    "created_at" timestamp NOT NULL DEFAULT now(),
-
-    -- 同じ商品を複数回、報告することを防ぐ制約
-    CONSTRAINT "unique_purchase_report" UNIQUE ("item_id")
+-- Recipe.materials: name, query, inPantry
+CREATE TABLE "chat_recipe_materials" (
+    "recipe_id" uuid NOT NULL REFERENCES "chat_recipes" ("recipe_id") ON DELETE CASCADE,
+    "name" varchar(120) NOT NULL,
+    "query" text NOT NULL,
+    "in_pantry" boolean NOT NULL DEFAULT FALSE,
+    "sort_order" integer NOT NULL DEFAULT 0,
+    PRIMARY KEY ("recipe_id", "name", "query")
 );
 
-CREATE INDEX "idx_purchase_reports_user_id" ON "PurchaseReports" ("user_id");
-CREATE INDEX "idx_purchase_reports_item_id" ON "PurchaseReports" ("item_id");
-
--- Images
-
-CREATE TABLE "Images" (
-    -- 画像ID（ImageId）
-    "image_id" uuid PRIMARY KEY,
-
-    -- 画像URL
-    "url" text NOT NULL,
-
-    -- アップロードしたユーザー
-    "user_id" uuid NOT NULL REFERENCES "Users" ("user_id") ON DELETE CASCADE,
-
-    -- アップロード時刻
-    "created_at" timestamp NOT NULL DEFAULT now()
+CREATE INDEX "idx_chat_recipe_materials_recipe" ON "chat_recipe_materials" (
+    "recipe_id"
 );
 
-CREATE INDEX "idx_images_user_id" ON "Images" ("user_id");
+-- ---------- Views (optional but useful) ----------
+-- StoreProfile: reportsCount を返す（集計で算出）
+CREATE VIEW "v_store_profile" AS
+SELECT
+    s."user_id" AS "store_id",
+    s."store_name",
+    s."address",
+    s."icon_url",
+    s."introduction",
+    coalesce(r."reports_count", 0)::integer AS "reports_count"
+FROM "store_settings" s
+LEFT JOIN (
+    SELECT
+        i."store_user_id" AS "store_user_id",
+        count(*) AS "reports_count"
+    FROM "purchase_reports" pr
+    JOIN "store_items" i ON i."item_id" = pr."item_id"
+    GROUP BY i."store_user_id"
+) r ON r."store_user_id" = s."user_id";
+
+-- Buyer Reports summary: totalCount / totalDiscount
+CREATE VIEW "v_buyer_reports_summary" AS
+SELECT
+    pr."buyer_user_id",
+    count(*)::integer AS "total_count",
+    coalesce(sum(i."price_regular" - i."price_discount"), 0)::integer
+        AS "total_discount"
+FROM "purchase_reports" pr
+JOIN "store_items" i ON i."item_id" = pr."item_id"
+GROUP BY pr."buyer_user_id";
