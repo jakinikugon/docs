@@ -125,7 +125,7 @@ ChatRecipes(
   user_id VARCHAR(100) REFERENCES Users(user_id),               -- ユーザーID（UserId）
   message_id VARCHAR(100) REFERENCES ChatMessages(message_id),  -- 各会話のid
   title VARCHAR(100),
-  discription VARCHAR(100)
+  description VARCHAR(100)
 )
 ```
 
