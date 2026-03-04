@@ -1,17 +1,6 @@
--- ==================================================== --
--- PostgreSQL schema
--- - UUID はアプリ側で生成（DBでDEFAULT生成しない）
--- - buyer/store は Users.account_type で識別
--- - リフレッシュトークンは上書きで運用（1ユーザー1行）
--- ==================================================== --
-
--- ------ enums ------ --
-
-CREATE TYPE "account_type_enum" AS ENUM ('buyer', 'store');
-CREATE TYPE "role_enum" AS ENUM ('user', 'assistant');
-
 -- Users
 
+CREATE TYPE account_type_enum AS ENUM ('buyer', 'store');
 
 CREATE TABLE "Users" (
     -- ユーザー ID（UserId）
@@ -29,9 +18,6 @@ CREATE TABLE "Users" (
     -- 更新時刻
     "updated_at" timestamp NOT NULL DEFAULT now()
 );
-
--- 少なくとも検索で使う範囲は索引を作成しておく
-CREATE INDEX "idx_users_email" ON "Users" ("email");
 
 -- refresh token の状態
 CREATE TYPE refresh_token_status_enum AS ENUM ('active', 'revoked', 'rotated');
@@ -66,6 +52,9 @@ CREATE TABLE "RefreshTokens" (
 CREATE INDEX "idx_refresh_tokens_user_id" ON "RefreshTokens" ("user_id");
 CREATE INDEX "idx_refresh_tokens_expires_at" ON "RefreshTokens" ("expires_at");
 CREATE INDEX "idx_refresh_tokens_status" ON "RefreshTokens" ("status");
+
+-- 少なくとも検索で使う範囲は索引を作成しておく
+CREATE INDEX "idx_users_email" ON "Users" ("email");
 
 -- UsersCredentials
 
