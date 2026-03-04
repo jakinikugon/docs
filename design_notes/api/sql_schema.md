@@ -1,11 +1,15 @@
 # SQL スキーマ
 
+- PostgreSQL を想定
+  - 文字列リテラル: '文字列'
+  - テーブル名・列名などの識別子: "識別子"
+
 ## Users
 
 全ユーザーの一覧（buyerとstore）
 
 ```sql
-CREATE TYPE account_type_enum AS ENUM("buyer", "store")
+CREATE TYPE account_type_enum AS ENUM('buyer', 'store')
 ```
 
 ```sql
@@ -98,7 +102,7 @@ PurchaseReports(
 会話履歴
 
 ```sql
-CREATE TYPE role_type_enum AS ENUM("user", "assistant")
+CREATE TYPE role_type_enum AS ENUM('user', 'assistant')
 ```
 
 ```sql
