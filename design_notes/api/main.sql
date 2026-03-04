@@ -236,3 +236,19 @@ CREATE INDEX "idx_purchase_reports_user_id" ON "PurchaseReports" ("user_id");
 CREATE INDEX "idx_purchase_reports_item_id" ON "PurchaseReports" ("item_id");
 
 -- Images
+
+CREATE TABLE "Images" (
+    -- 画像ID（ImageId）
+    "image_id" uuid PRIMARY KEY,
+
+    -- 画像URL
+    "url" text NOT NULL,
+
+    -- アップロードしたユーザー
+    "user_id" uuid NOT NULL REFERENCES "Users" ("user_id") ON DELETE CASCADE,
+
+    -- アップロード時刻
+    "created_at" timestamp NOT NULL DEFAULT now()
+);
+
+CREATE INDEX "idx_images_user_id" ON "Images" ("user_id");
