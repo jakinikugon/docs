@@ -18,6 +18,16 @@ type Timestamp = string; // ISO 8601 形式の日時文字列
 type JanCode = string; // JAN コードの文字列
 type Email = string; // メールアドレスの文字列
 type Password = string; // パスワードの文字列
+type JWT = string; // JWT トークン (JWS Compact Serialization)
+// JWT クレーム
+type JwtClaims = {
+  sub: UserId;
+  accountType: AccountType;
+  typ: "access" | "refresh";
+  iat: number; // unix 秒
+  exp: number; // unix 秒
+  jti: string; // token id
+};
 
 // ドメイン固有の型定義
 type UserId = UUID;
@@ -205,9 +215,35 @@ type Reports = {
     date: Timestamp;
   }[];
 };
-
-
 ```
+
+## 認証周りのルール
+
+### とーくんぽりしー
+
+- アクセストークン
+  - TTL: 12分
+  - 用途: API 認証（`Authorization: Bearer <access_token>`）
+- リフレッシュトークン
+  - TTL: 7日
+  - 用途: アクセストークンの再発行（`Set-Cookie: refresh_token=...;
+HttpOnly; Secure; SameSite=Lax; Path=/api/auth/refresh`）
+  - refresh 成功時に refresh を新しいものへ更新して、古い refresh は無効化する
+
+### 認可の範囲
+
+- `AccountType = buyer` のみ許可: `/api/buyers/me/**`
+  - 購入者の設定・冷蔵庫・チャット・購入報告など
+- `AccountType = store` のみ許可: `/api/stores/me/**`
+  - 店舗設定・自店舗の出品CRUD・自店舗のレポートなど
+  - `/api/stores/me/items/{item_id}`: `item.storeId == sub` を必須とする
+    - GET/PATCH/DELETE いずれの操作も
+    - 不一致の場合は `403 FORBIDDEN` を返すかな？
+- buyer/store 両方許可: `/api/upload/image`
+  - 画像アップロード
+- 公開（認証不要）:
+  - `/api/items/**`, `/api/stores/{store_id}/**`, `/api/categories`,
+    `/api/jan/{jan_code}`, `/api/pantry/suggestions`
 
 ## API Endpoints
 
@@ -216,8 +252,10 @@ type Reports = {
 #### POST `/api/auth/register`
 
 - ユーザー登録
-- Email と Password を受け取ってユーザーを作成する想定
-- ログインも同時に行う？
+- Email と Password と accountType を受け取ってユーザーを作成する想定
+- 登録後にログイン状態にする
+  - アクセストークンをレスポンスで返す
+  - リフレッシュトークンは Set-Cookie で返す（HttpOnly）
 
 ```ts
 type AuthRegisterPostRequest = {
@@ -230,8 +268,11 @@ type AuthRegisterPostResponse = {
   userId: UserId;
   email: Email;
   accountType: AccountType;
+  accessToken: JWT;
 };
 ```
+
+リクエスト
 
 ```json
 {
@@ -241,11 +282,18 @@ type AuthRegisterPostResponse = {
 }
 ```
 
+レスポンス
+
+```text
+Set-Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/refresh
+```
+
 ```json
 {
   "userId": "123e4567-e89b-12d3-a456-426614174000",
   "email": "user@example.com",
-  "accountType": "buyer"
+  "accountType": "buyer",
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
@@ -253,14 +301,21 @@ type AuthRegisterPostResponse = {
 
 - ログイン
 - Email と Password を受け取ってログイン処理を行う想定
-- レスポンスは空（ステータスのみ返却）を想定
+- アクセストークンをレスポンスで返す
+- リフレッシュトークンは Set-Cookie で返す（HttpOnly）
 
 ```ts
 type AuthLoginPostRequest = {
   email: Email;
   password: Password;
 };
+
+typeAuthLoginResponse = {
+  accessToken: JWT;
+};
 ```
+
+リクエスト
 
 ```json
 {
@@ -269,16 +324,36 @@ type AuthLoginPostRequest = {
 }
 ```
 
+レスポンス
+
+```text
+Set-Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/refresh
+```
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
 #### POST `/api/auth/logout`
 
 - ログアウト
-- アクセストークンを無効化する想定
+  - リフレッシュトークンを失効する処理
+  - [TODO] DB 設計: refresh セッション削除にするか、無効化にするかは後で決める
 - レスポンスは空
+- `Authorization: Bearer` のヘッダはなくていい
+
+レスポンス
+
+```text
+Set-Cookie: refreshToken=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/refresh; Max-Age=0
+```
 
 #### GET `/api/auth/session`
 
 - セッション情報の取得
-- アクセストークンからユーザー ID とアカウントタイプを返す
+  - アクセストークン（Bearer）からユーザー ID とアカウントタイプを返す
 - 関数名：GetAuthSession
 
 ```ts
@@ -288,10 +363,36 @@ type AuthSessionGetResponse = {
 };
 ```
 
+リクエスト
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
 ```json
 {
   "userId": "123e4567-e89b-12d3-a456-426614174000",
   "accountType": "buyer"
+}
+```
+
+#### POST `/api/auth/refresh`
+
+- クッキーのリフレッシュトークンを検証し、新しいアクセストークンを返す
+- リフレッシュローテンションを行い、新しいリフレッシュトークンをクッキーで返す
+- リクエストボディは空
+
+```ts
+type AuthRefreshResponse = {
+  accessToken: JWT;
+};
+```
+
+レスポンス
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
