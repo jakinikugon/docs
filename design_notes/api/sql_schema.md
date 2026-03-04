@@ -22,16 +22,20 @@ CREATE TABLE "Users" (
     "account_type" account_type_enum NOT NULL, -- アカウントの種別（buyer か store）
     "created_at" timestamp NOT NULL DEFAULT now(),
     "updated_at" timestamp NOT NULL DEFAULT now()
-)
+);
 ```
 
 ### UsersCredentials
 
+Users と 1:1 にする。つまり、`user_id` が PK かつ FK。
+
 ```sql
-UsersCredentials(
-  user_id PRIMARY KEY REFERENCES Users(user_id),    -- ユーザーID（UserId）
-  password_hash　VARCHAR(1000) NOT NULL             -- パスワードハッシュ
-)
+CREATE TABLE "UsersCredentials" (
+    "user_id" uuid PRIMARY KEY -- ユーザーID（UserId）
+    REFERENCES "Users" ("user_id") -- 列に対して 参照整合性制約 を付与して FK にする
+    ON DELETE CASCADE, -- Users を消したら資格情報も消す
+    "password_hash" text NOT NULL -- パスワードハッシュ（可変長なので text）
+);
 ```
 
 ### BuyersProfiles
