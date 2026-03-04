@@ -384,6 +384,7 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/refre
 ```ts
 type AuthSessionGetResponse = {
   userId: UserId;
+  userName: BuyerName | StoreName;
   accountType: AccountType;
 };
 ```
@@ -394,9 +395,12 @@ type AuthSessionGetResponse = {
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
+レスポンス
+
 ```json
 {
   "userId": "123e4567-e89b-12d3-a456-426614174000",
+  "userName": "ほげ",
   "accountType": "buyer"
 }
 ```
