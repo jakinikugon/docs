@@ -196,32 +196,6 @@ CREATE INDEX "idx_pantry_items_item_name" ON "PantryItems" ("item_name");
 CREATE INDEX "idx_pantry_items_category" ON "PantryItems" ("category");
 ```
 
-## 購入報告
-
-### PurchaseReports
-
-```sql
-CREATE TABLE "PurchaseReports" (
-    -- 購入報告 ID（連番）
-    "purchase_id" integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-
-    -- 報告したユーザー ID
-    "user_id" uuid NOT NULL REFERENCES "Users" ("user_id") ON DELETE CASCADE,
-
-    -- 購入された商品（ItemId）
-    "item_id" uuid NOT NULL REFERENCES "StoreItems" ("item_id") ON DELETE CASCADE,
-
-    -- 報告された時間
-    "created_at" timestamp NOT NULL DEFAULT now(),
-
-    -- 同じ商品を複数回、報告することを防ぐ制約
-    CONSTRAINT "unique_purchase_report" UNIQUE ("item_id")
-);
-
-CREATE INDEX "idx_purchase_reports_user_id" ON "PurchaseReports" ("user_id");
-CREATE INDEX "idx_purchase_reports_item_id" ON "PurchaseReports" ("item_id");
-```
-
 ## チャット
 
 ### ChatMessages
@@ -256,7 +230,35 @@ ChatRecipes(
 )
 ```
 
-## Images
+## ほか
+
+### PurchaseReports
+
+購入報告
+
+```sql
+CREATE TABLE "PurchaseReports" (
+    -- 購入報告 ID（連番）
+    "purchase_id" integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+    -- 報告したユーザー ID
+    "user_id" uuid NOT NULL REFERENCES "Users" ("user_id") ON DELETE CASCADE,
+
+    -- 購入された商品（ItemId）
+    "item_id" uuid NOT NULL REFERENCES "StoreItems" ("item_id") ON DELETE CASCADE,
+
+    -- 報告された時間
+    "created_at" timestamp NOT NULL DEFAULT now(),
+
+    -- 同じ商品を複数回、報告することを防ぐ制約
+    CONSTRAINT "unique_purchase_report" UNIQUE ("item_id")
+);
+
+CREATE INDEX "idx_purchase_reports_user_id" ON "PurchaseReports" ("user_id");
+CREATE INDEX "idx_purchase_reports_item_id" ON "PurchaseReports" ("item_id");
+```
+
+### Images
 
 ```sql
 Images(

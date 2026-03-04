@@ -161,6 +161,10 @@ CREATE INDEX "idx_pantry_items_user_id" ON "PantryItems" ("user_id");
 CREATE INDEX "idx_pantry_items_item_name" ON "PantryItems" ("item_name");
 CREATE INDEX "idx_pantry_items_category" ON "PantryItems" ("category");
 
+-- ChatMessages
+
+-- ChatRecipes
+
 -- PurchaseReports
 
 CREATE TABLE "PurchaseReports" (
@@ -182,3 +186,5 @@ CREATE TABLE "PurchaseReports" (
 
 CREATE INDEX "idx_purchase_reports_user_id" ON "PurchaseReports" ("user_id");
 CREATE INDEX "idx_purchase_reports_item_id" ON "PurchaseReports" ("item_id");
+
+-- Images
