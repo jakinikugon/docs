@@ -71,9 +71,7 @@ CREATE TYPE allergen_enum AS ENUM (
 
 CREATE TABLE "BuyersProfiles" (
     -- ユーザー ID（UserId）
-    "user_id" uuid PRIMARY KEY
-    REFERENCES "Users" ("user_id")
-    ON DELETE CASCADE,
+    "user_id" uuid PRIMARY KEY REFERENCES "Users" ("user_id") ON DELETE CASCADE,
 
     -- buyer の名前
     "buyer_name" varchar(60) NOT NULL,
@@ -89,9 +87,7 @@ CREATE TABLE "BuyersProfiles" (
 ```sql
 CREATE TABLE "StoreProfiles" (
     -- ユーザー ID（UserId）
-    "user_id" uuid PRIMARY KEY
-    REFERENCES "Users" ("user_id")
-    ON DELETE CASCADE,
+    "user_id" uuid PRIMARY KEY REFERENCES "Users" ("user_id") ON DELETE CASCADE,
 
     -- store の名前
     "store_name" varchar(60) NOT NULL,
@@ -123,9 +119,7 @@ CREATE TABLE "StoreItems" (
 
     -- 追加したユーザーの ID（UserId）
     -- なお、store アカウントの user_id が入る
-    "user_id" uuid NOT NULL
-    REFERENCES "Users" ("user_id")
-    ON DELETE CASCADE,
+    "user_id" uuid NOT NULL REFERENCES "Users" ("user_id") ON DELETE CASCADE,
 
     -- 商品名
     "item_name" varchar(100) NOT NULL,
@@ -202,17 +196,30 @@ CREATE INDEX "idx_pantry_items_item_name" ON "PantryItems" ("item_name");
 CREATE INDEX "idx_pantry_items_category" ON "PantryItems" ("category");
 ```
 
-## PurchaseReports
+## 購入報告
 
-購入報告
+### PurchaseReports
 
 ```sql
-PurchaseReports(
-  purchase_id SERIAL PRIMARY KEY,               -- 購入報告id（連番）
-  user_id NOT NULL REFERENCES Users(user_id),   -- ユーザーID（UserId）
-  item_id NOT NULL VARCHAR(100),                -- ItemId
-  created_at TIMESTAMP NOT NULL DEFAULT NOW()   -- 報告された時間
-)
+CREATE TABLE "PurchaseReports" (
+    -- 購入報告 ID（連番）
+    "purchase_id" integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+    -- 報告したユーザー ID
+    "user_id" uuid NOT NULL REFERENCES "Users" ("user_id") ON DELETE CASCADE,
+
+    -- 購入された商品（ItemId）
+    "item_id" uuid NOT NULL REFERENCES "StoreItems" ("item_id") ON DELETE CASCADE,
+
+    -- 報告された時間
+    "created_at" timestamp NOT NULL DEFAULT now(),
+
+    -- 同じ商品を複数回、報告することを防ぐ制約
+    CONSTRAINT "unique_purchase_report" UNIQUE ("item_id")
+);
+
+CREATE INDEX "idx_purchase_reports_user_id" ON "PurchaseReports" ("user_id");
+CREATE INDEX "idx_purchase_reports_item_id" ON "PurchaseReports" ("item_id");
 ```
 
 ## チャット
