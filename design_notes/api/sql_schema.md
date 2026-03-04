@@ -27,6 +27,9 @@ CREATE TABLE "Users" (
     -- アカウントの種別（buyer か store）
     "account_type" account_type_enum NOT NULL,
 
+    -- JWT のリフレッシュトークン
+    "refresh_token" text,
+
     -- 作成時刻
     "created_at" timestamp NOT NULL DEFAULT now(),
 
@@ -97,7 +100,10 @@ CREATE TABLE "StoreProfiles" (
     "icon_url" text,
 
     -- お店の紹介
-    "introduction" text
+    "introduction" text,
+
+    -- 救済カウント
+    "reportsCount" integer NOT NULL DEFAULT 0 CHECK ("price_regular" >= 0)
 );
 ```
 

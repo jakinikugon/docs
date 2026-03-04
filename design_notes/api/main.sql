@@ -12,6 +12,9 @@ CREATE TABLE "Users" (
     -- アカウントの種別（buyer か store）
     "account_type" account_type_enum NOT NULL,
 
+    -- JWT のリフレッシュトークン
+    "refresh_token" text,
+
     -- 作成時刻
     "created_at" timestamp NOT NULL DEFAULT now(),
 
@@ -51,6 +54,7 @@ CREATE TABLE "BuyersProfiles" (
 
     -- アレルギー食品
     -- 空配列がデフォルトのほうが扱いやすいので NOT NULL + DEFAULT を付ける
+    -- :: 以降は型（キャスト）
     "allergens" allergen_enum [] NOT NULL DEFAULT '{}'::allergen_enum []
 );
 
@@ -72,7 +76,10 @@ CREATE TABLE "StoreProfiles" (
     "icon_url" text,
 
     -- お店の紹介
-    "introduction" text
+    "introduction" text,
+
+    -- 救済カウント
+    "reportsCount" integer NOT NULL DEFAULT 0 CHECK ("price_regular" >= 0)
 );
 
 -- StoreItems
