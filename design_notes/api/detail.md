@@ -4,7 +4,6 @@
 
 - APIの型名の命名はパス + メソッド + (リクエスト | レスポンス) の形式にする
   - ソート時にきれいに並べたいため
-- トークンはとりあえずボディで受け取る想定で
 
 ## Domain
 
@@ -19,7 +18,6 @@ type Timestamp = string; // ISO 8601 形式の日時文字列
 type JanCode = string; // JAN コードの文字列
 type Email = string; // メールアドレスの文字列
 type Password = string; // パスワードの文字列
-type JWT = string; // JWT トークンの文字列
 
 // ドメイン固有の型定義
 type UserId = UUID;
@@ -180,11 +178,17 @@ type Recipe = {
   materials: Material[];
 };
 
-type ChatMessage = {
-  role: Role;
-  content: string;
-  recipes: Recipe[] | null; // assistant のときのみレシピ提案がある想定
-};
+type ChatMessage =
+  | {
+      role: "assistant";
+      content: string;
+      recipes: Recipe[];
+    }
+  | {
+      role: "user";
+      content: string;
+      recipes: null;
+    };
 
 type Recipes = Recipe[];
 
@@ -368,17 +372,13 @@ type AuthRegisterPostResponse = {
 #### POST `/api/auth/login`
 
 - ログイン
-- Email と Password を受け取ってアクセストークンを発行する想定
+- Email と Password を受け取ってログイン処理を行う想定
+- レスポンスは空（ステータスのみ返却）を想定
 
 ```ts
 type AuthLoginPostRequest = {
   email: Email;
   password: Password;
-};
-
-type AuthLoginPostResponse = {
-  accessToken: JWT;
-  refreshToken: JWT;
 };
 ```
 
@@ -386,13 +386,6 @@ type AuthLoginPostResponse = {
 {
   "email": "user@example.com",
   "password": "password123"
-}
-```
-
-```json
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "dGhpc2lzYXJlZnJlc2h0b2tlbg..."
 }
 ```
 
@@ -419,35 +412,6 @@ type AuthSessionGetResponse = {
 {
   "userId": "123e4567-e89b-12d3-a456-426614174000",
   "accountType": "buyer"
-}
-```
-
-#### POST `/api/auth/refresh`
-
-- アクセストークンのリフレッシュ
-- リフレッシュトークンを受け取って新しいアクセストークンを発行する想定
-
-```ts
-type AuthRefreshPostRequest = {
-  refreshToken: JWT;
-};
-
-type AuthRefreshPostResponse = {
-  accessToken: JWT;
-  refreshToken: JWT;
-};
-```
-
-```json
-{
-  "refreshToken": "dGhpc2lzYXJlZnJlc2h0b2tlbg..."
-}
-```
-
-```json
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "dGhpc2lzYXJlZnJlc2h0b2tlbg..."
 }
 ```
 
@@ -648,7 +612,12 @@ type BuyersMeChatMessagesGetResponse = Chat;
         {
           "title": "簡単オムレツ",
           "description": "牛乳と卵を使った簡単なオムレツのレシピです。",
-          "materials": ["卵", "牛乳", "塩", "こしょう"]
+          "materials": [
+            { "name": "卵", "query": "卵", "inPantry": true },
+            { "name": "牛乳", "query": "牛乳", "inPantry": true },
+            { "name": "塩", "query": "塩", "inPantry": false },
+            { "name": "こしょう", "query": "こしょう", "inPantry": false }
+          ]
         }
       ]
     },
@@ -694,12 +663,23 @@ type BuyersMeChatRecipesGetResponse = Recipes;
   {
     "title": "簡単オムレツ",
     "description": "牛乳と卵を使った簡単なオムレツのレシピです。",
-    "materials": ["卵", "牛乳", "塩", "こしょう"]
+    "materials": [
+      { "name": "卵", "query": "卵", "inPantry": true },
+      { "name": "牛乳", "query": "牛乳", "inPantry": true },
+      { "name": "塩", "query": "塩", "inPantry": false },
+      { "name": "こしょう", "query": "こしょう", "inPantry": false }
+    ]
   },
   {
     "title": "フレンチトースト",
     "description": "牛乳と卵を使って手軽に作れるフレンチトーストです。",
-    "materials": ["食パン", "卵", "牛乳", "砂糖", "バター"]
+    "materials": [
+      { "name": "食パン", "query": "食パン", "inPantry": false },
+      { "name": "卵", "query": "卵", "inPantry": true },
+      { "name": "牛乳", "query": "牛乳", "inPantry": true },
+      { "name": "砂糖", "query": "砂糖", "inPantry": false },
+      { "name": "バター", "query": "バター", "inPantry": false }
+    ]
   }
 ]
 ```

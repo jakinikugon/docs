@@ -6,7 +6,6 @@
 - `/api/auth/login`(`POST`): ログイン
 - `/api/auth/logout`(`POST`): ログアウト
 - `/api/auth/session`(`GET`): セッション情報の取得
-- `/api/auth/refresh`(`POST`): アクセストークンのリフレッシュ
 
 ## Buyers（個人アカウント）
 
