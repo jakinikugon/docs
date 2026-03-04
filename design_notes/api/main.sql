@@ -22,6 +22,9 @@ CREATE TABLE "Users" (
     "updated_at" timestamp NOT NULL DEFAULT now()
 );
 
+-- 少なくとも検索で使う範囲は索引を作成しておく
+CREATE INDEX "idx_users_email" ON "Users" ("email");
+
 -- UsersCredentials
 
 CREATE TABLE "UsersCredentials" (
@@ -85,10 +88,10 @@ CREATE TABLE "StoreProfiles" (
 -- StoreItems
 
 CREATE TABLE "StoreItems" (
-    -- 商品のid（ItemId）
+    -- 商品の ID（ItemId）
     "item_id" uuid PRIMARY KEY,
 
-    -- 追加したユーザーのID（UserId）
+    -- 追加したユーザーの ID（UserId）
     -- なお、store アカウントの user_id が入る
     "user_id" uuid NOT NULL
     REFERENCES "Users" ("user_id")
@@ -100,7 +103,7 @@ CREATE TABLE "StoreItems" (
     -- 商品説明
     "description" text,
 
-    -- 商品のアイコン（URLは可変長なので text）
+    -- 商品のアイコン（URL は可変長なので text）
     "image_url" text,
 
     -- 商品の通常価格（0 円以上なので制約をつける）
@@ -110,7 +113,7 @@ CREATE TABLE "StoreItems" (
     "price_discount" integer NOT NULL CHECK ("price_discount" >= 0),
 
     -- JAN コード（固定長で運用する、正規表現で 13 桁の数字のみにする）
-    "jan_code" varchar(13) CHECK ("jan_code" ~ '^[0-9]{13}$'),
+    "jan_code" varchar(13) CHECK ("jan_code" IS NULL OR "jan_code" ~ '^[0-9]{8,14}$'),
 
     -- カテゴリ
     "category" text,
@@ -128,11 +131,38 @@ CREATE TABLE "StoreItems" (
     "created_at" timestamp NOT NULL DEFAULT now()
 );
 
--- 少なくとも検索で使う範囲は索引を作成しておく
-CREATE INDEX "idx_store_items_user_id" ON "UserID" ("user_id");
-CREATE INDEX "idx_store_items_item_name" ON "ItemName" ("item_name");
-CREATE INDEX "idx_store_items_price_regular" ON "PriceRegular" ("price_regular");
-CREATE INDEX "idx_store_items_price_discount" ON "PriceDiscount" ("price_discount");
-CREATE INDEX "idx_store_items_category" ON "Category" ("category");
-CREATE INDEX "idx_store_sale_start" ON "SaleStart" ("sale_start");
-CREATE INDEX "idx_store_sale_end" ON "SaleEnd" ("sale_end");
+CREATE INDEX "idx_store_items_user_id" ON "StoreItems" ("user_id");
+CREATE INDEX "idx_store_items_item_name" ON "StoreItems" ("item_name");
+CREATE INDEX "idx_store_items_price_regular" ON "StoreItems" ("price_regular");
+CREATE INDEX "idx_store_items_price_discount" ON "StoreItems" ("price_discount");
+CREATE INDEX "idx_store_items_category" ON "StoreItems" ("category");
+CREATE INDEX "idx_store_items_sale_start" ON "StoreItems" ("sale_start");
+CREATE INDEX "idx_store_items_sale_end" ON "StoreItems" ("sale_end");
+
+-- PantryItems
+
+CREATE TABLE "PantryItems" (
+    -- 食品（商品）の ID（PantryItemId）
+    "item_id" uuid PRIMARY KEY,
+
+    -- ユーザーID（UserId）
+    "user_id" uuid NOT NULL
+    REFERENCES "Users" ("user_id")
+    ON DELETE CASCADE,
+
+    -- 食品名
+    "item_name" varchar(100) NOT NULL,
+
+    -- janコード（JanCode）
+    "jan_code" varchar(13) CHECK ("jan_code" IS NULL OR "jan_code" ~ '^[0-9]{8,14}$'),
+
+    -- 食品のカテゴリ（ItemCategory は string 扱いなので text）
+    "category" text,
+
+    -- 追加した時間
+    "created_at" timestamp NOT NULL DEFAULT now()
+);
+
+CREATE INDEX "idx_pantry_items_user_id" ON "PantryItems" ("user_id");
+CREATE INDEX "idx_pantry_items_item_name" ON "PantryItems" ("item_name");
+CREATE INDEX "idx_pantry_items_category" ON "PantryItems" ("category");
