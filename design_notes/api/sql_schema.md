@@ -13,9 +13,7 @@
 
 ```sql
 CREATE TYPE account_type_enum AS ENUM ('buyer', 'store');
-```
 
-```sql
 CREATE TABLE "Users" (
     "user_id" uuid PRIMARY KEY DEFAULT gen_random_uuid(), -- ユーザーID（UserId）
     "email" varchar(100) NOT NULL UNIQUE, -- メールアドレス（Email）
@@ -25,7 +23,7 @@ CREATE TABLE "Users" (
 );
 ```
 
-### UsersCredentials
+## UsersCredentials
 
 Users と 1:1 にする。つまり、`user_id` が PK かつ FK。
 
@@ -38,29 +36,50 @@ CREATE TABLE "UsersCredentials" (
 );
 ```
 
-### BuyersProfiles
+## BuyersProfiles
+
+api/detail.md の Allergen に準拠して allergens を厳密にする
 
 ```sql
-BuyersProfiles(
-  user_id PRIMARY KEY REFERENCES Users(user_id),    -- ユーザーID（UserId）
-  buyer_name VARCHAR(100) NOT NULL,                 -- buyerの名前
-  allergens TEXT[]                                  -- アレルギー食品
-)
+CREATE TYPE allergen_enum AS ENUM (
+    'egg', 'milk', 'wheat', 'buckwheat', 'peanut', 'shrimp', 'crab', 'walnut',
+    'abalone', 'squid', 'salmon_roe', 'orange', 'cashew_nut', 'kiwi', 'beef', 'sesame',
+    'salmon', 'mackerel', 'soybean', 'chicken', 'banana', 'pork', 'macadamia_nut',
+    'peach', 'yam', 'apple', 'gelatin', 'almond'
+);
+
+CREATE TABLE "BuyersProfiles" (
+    -- ユーザーID（UserId）
+    "user_id" uuid PRIMARY KEY
+    REFERENCES "Users" ("user_id")
+    ON DELETE CASCADE,
+
+    -- buyerの名前
+    "buyer_name" varchar(60) NOT NULL,
+
+    -- アレルギー食品
+    -- 空配列がデフォルトのほうが扱いやすいので NOT NULL + DEFAULT を付ける
+    "allergens" allergen_enum [] NOT NULL DEFAULT '{}'::allergen_enum []
+);
 ```
 
-### StoreProfiles
+## StoreProfiles
 
 ```sql
-StoreProfiles(
-  user_id PRIMARY KEY REFERENCES Users(user_id),    -- ユーザーID（UserId）
-  store_name VARCHAR(100) NOT NULL,                 -- storeの名前
-  address VARCHAR(100),                             -- storeの住所
-  icon_url VARCHAR(100),                            -- アイコン（画像）
-  introduction VARCHAR(100)                         -- お店の紹介
-)
+CREATE TABLE "StoreProfiles" (
+    -- ユーザーID（UserId）
+    "user_id" uuid PRIMARY KEY
+    REFERENCES "Users" ("user_id")
+    ON DELETE CASCADE,
+
+    "store_name" varchar(60) NOT NULL, -- storeの名前
+    "address" text, -- storeの住所
+    "icon_url" text, -- アイコン（画像）
+    "introduction" text -- お店の紹介
+);
 ```
 
-### StoreItems
+## StoreItems
 
 storeの在庫
 
@@ -77,7 +96,7 @@ StoreItems(
 )
 ```
 
-### PantryItems
+## PantryItems
 
 冷蔵庫の在庫
 
@@ -91,7 +110,7 @@ PantryItems(
 )
 ```
 
-### PurchaseReports
+## PurchaseReports
 
 購入報告
 
@@ -104,7 +123,7 @@ PurchaseReports(
 )
 ```
 
-### ChatMessages
+## ChatMessages
 
 会話履歴
 
@@ -124,7 +143,7 @@ ChatMessages(
 )
 ```
 
-### ChatRecipes
+## ChatRecipes
 
 ```sql
 ChatRecipes(
@@ -136,7 +155,7 @@ ChatRecipes(
 )
 ```
 
-### Images
+## Images
 
 ```sql
 Images(
