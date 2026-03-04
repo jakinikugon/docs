@@ -4,6 +4,7 @@
 
 - APIの型名の命名はパス + メソッド + (リクエスト | レスポンス) の形式にする
   - ソート時にきれいに並べたいため
+- 空を返す時の http status code は 204
 
 ## Domain
 
@@ -27,6 +28,10 @@ type JwtClaims = {
   iat: number; // unix 秒
   exp: number; // unix 秒
   jti: string; // token id
+};
+// エラー
+type ErrorResponse = {
+  message: string;
 };
 
 // ドメイン固有の型定義
@@ -219,31 +224,51 @@ type Reports = {
 
 ## 認証周りのルール
 
-### とーくんぽりしー
+### JWT クレーム
+
+- 共通
+  - sub: UserId
+  - accountType: "buyer" | "store"
+  - iat, exp
+  - jti: トークンID（UUID）
+- typ:
+  - access: "access"
+  - refresh: "refresh"
+
+### トークンポリシー
 
 - アクセストークン
-  - TTL: 12分
-  - 用途: API 認証（`Authorization: Bearer <access_token>`）
+  - TTL: 12分 （デモ向けにもっと伸ばすかも）
+  - 用途: API 認証
 - リフレッシュトークン
   - TTL: 7日
-  - 用途: アクセストークンの再発行（`Set-Cookie: refresh_token=...;
-HttpOnly; Secure; SameSite=Lax; Path=/api/auth/refresh`）
-  - refresh 成功時に refresh を新しいものへ更新して、古い refresh は無効化する
+  - 用途: アクセストークンの再発行
+  - リフレッシュ成功時にリフレッシュトークンは新しいものに上書きされる
+- 認証できない・アクセストークン切れのときは 401 を返す
+  - 401 が返されたら `POST /api/auth/refresh` して、元の API を再試行
+    - refresh も 401 が返ってきたらログイン画面にリダイレクトとかでいいと思う
 
 ### 認可の範囲
+
+認可が必要な API には次を付与してアクセスするだけ。
+
+```
+Authorization: Bearer <access_token>
+```
 
 - `AccountType = buyer` のみ許可: `/api/buyers/me/**`
   - 購入者の設定・冷蔵庫・チャット・購入報告など
 - `AccountType = store` のみ許可: `/api/stores/me/**`
-  - 店舗設定・自店舗の出品CRUD・自店舗のレポートなど
+  - 店舗設定・自店舗の出品 CRUD・自店舗のレポートなど
   - `/api/stores/me/items/{item_id}`: `item.storeId == sub` を必須とする
     - GET/PATCH/DELETE いずれの操作も
-    - 不一致の場合は `403 FORBIDDEN` を返すかな？
-- buyer/store 両方許可: `/api/upload/image`
-  - 画像アップロード
+    - 不一致の場合は 404 を返す
 - 公開（認証不要）:
   - `/api/items/**`, `/api/stores/{store_id}/**`, `/api/categories`,
-    `/api/jan/{jan_code}`, `/api/pantry/suggestions`
+    `/api/jan/{jan_code}`, `/api/pantry/suggestions`, `/api/upload/image`
+
+なお、`/api/auth/session` 以外の `/api/auth/**` は Set-Cookie を更新するので必須になる。
+これ以外の API には Set-Cookie は不要（むしろ付与しないで）。
 
 ## API Endpoints
 
@@ -285,7 +310,7 @@ type AuthRegisterPostResponse = {
 レスポンス
 
 ```text
-Set-Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/refresh
+Set-Cookie: refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/refresh
 ```
 
 ```json
@@ -310,7 +335,7 @@ type AuthLoginPostRequest = {
   password: Password;
 };
 
-typeAuthLoginResponse = {
+type AuthLoginResponse = {
   accessToken: JWT;
 };
 ```
@@ -327,7 +352,7 @@ typeAuthLoginResponse = {
 レスポンス
 
 ```text
-Set-Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/refresh
+Set-Cookie: refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/refresh
 ```
 
 ```json
@@ -340,14 +365,14 @@ Set-Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secu
 
 - ログアウト
   - リフレッシュトークンを失効する処理
-  - [TODO] DB 設計: refresh セッション削除にするか、無効化にするかは後で決める
+  - DB 設計: 古いリフレッシュトークンは削除する
 - レスポンスは空
 - `Authorization: Bearer` のヘッダはなくていい
 
 レスポンス
 
 ```text
-Set-Cookie: refreshToken=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/refresh; Max-Age=0
+Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/refresh; Max-Age=0
 ```
 
 #### GET `/api/auth/session`
