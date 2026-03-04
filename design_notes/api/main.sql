@@ -12,15 +12,46 @@ CREATE TABLE "Users" (
     -- アカウントの種別（buyer か store）
     "account_type" account_type_enum NOT NULL,
 
-    -- JWT のリフレッシュトークン
-    "refresh_token" text,
-
     -- 作成時刻
     "created_at" timestamp NOT NULL DEFAULT now(),
 
     -- 更新時刻
     "updated_at" timestamp NOT NULL DEFAULT now()
 );
+
+-- refresh token の状態
+CREATE TYPE refresh_token_status_enum AS ENUM ('active', 'revoked', 'rotated');
+
+CREATE TABLE "RefreshTokens" (
+    -- JWT の jti（トークンID, UUID）
+    "token_id" uuid PRIMARY KEY,
+
+    -- 所有者
+    "user_id" uuid NOT NULL REFERENCES "Users" ("user_id") ON DELETE CASCADE,
+
+    -- refresh token のハッシュ
+    "token_hash" text NOT NULL UNIQUE,
+
+    -- 発行時刻
+    "issued_at" timestamp NOT NULL DEFAULT now(),
+
+    -- 失効時刻（exp）
+    "expires_at" timestamp NOT NULL,
+
+    -- 状態
+    "status" refresh_token_status_enum NOT NULL DEFAULT 'active',
+
+    -- 失効処理した時刻（logout / 不正検知など）
+    "revoked_at" timestamp,
+
+    -- rotation で置き換えた先の token_id
+    "replaced_by_token_id" uuid REFERENCES "RefreshTokens" ("token_id")
+);
+
+-- 典型クエリのための索引
+CREATE INDEX "idx_refresh_tokens_user_id" ON "RefreshTokens" ("user_id");
+CREATE INDEX "idx_refresh_tokens_expires_at" ON "RefreshTokens" ("expires_at");
+CREATE INDEX "idx_refresh_tokens_status" ON "RefreshTokens" ("status");
 
 -- 少なくとも検索で使う範囲は索引を作成しておく
 CREATE INDEX "idx_users_email" ON "Users" ("email");
