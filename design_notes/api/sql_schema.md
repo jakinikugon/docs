@@ -1,6 +1,6 @@
 # SQL スキーマ
 
-- PostgreSQL を想定
+- PostgreSQL 用の DDL 記法で記載する
   - 文字列リテラル: '文字列'
   - テーブル名・列名などの識別子: "識別子"
 - api/detail.md に従う
