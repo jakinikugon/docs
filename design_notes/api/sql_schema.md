@@ -12,7 +12,7 @@
 
 ### Users
 
-全ユーザーの一覧（buyer と store）
+全ユーザーの一覧（buyer と store）。
 
 ```sql
 CREATE TYPE account_type_enum AS ENUM ('buyer', 'store');
@@ -121,11 +121,17 @@ CREATE TABLE "StoreItems" (
     -- 商品名
     "item_name" varchar(100) NOT NULL,
 
+    -- 商品説明
+    "description" text,
+
     -- 商品のアイコン（URLは可変長なので text）
     "image_url" text,
 
-    -- 商品の価格（0 円以上なので制約をつける）
-    "price" integer NOT NULL CHECK ("price" >= 0),
+    -- 商品の通常価格（0 円以上なので制約をつける）
+    "price_regular" integer NOT NULL CHECK ("price_regular" >= 0),
+
+    -- 商品の割引価格
+    "price_discount" integer NOT NULL CHECK ("price_discount" >= 0),
 
     -- JAN コード（固定長で運用する、正規表現で 13 桁の数字のみにする）
     "jan_code" varchar(13) CHECK ("jan_code" ~ '^[0-9]{13}$'),
@@ -133,17 +139,27 @@ CREATE TABLE "StoreItems" (
     -- カテゴリ
     "category" text,
 
-    -- 出品時刻
-    "created_at" timestamp NOT NULL DEFAULT now(),
+    -- セール開始日
+    "sale_start" timestamp DEFAULT now(),
 
-    -- 変更時刻（価格更新など）
-    "updated_at" timestamp NOT NULL DEFAULT now()
+    -- セール終了日
+    "sale_end" timestamp NOT NULL DEFAULT now(),
+
+    -- 消費/賞味期限
+    "limit_date" timestamp DEFAULT now(),
+
+    -- 出品時刻
+    "created_at" timestamp NOT NULL DEFAULT now()
 );
 
 -- 少なくとも検索で使う範囲は索引を作成しておく
+CREATE INDEX "idx_store_items_user_id" ON "UserID" ("user_id");
 CREATE INDEX "idx_store_items_item_name" ON "ItemName" ("item_name");
-CREATE INDEX "idx_store_items_price" ON "Price" ("price");
+CREATE INDEX "idx_store_items_price_regular" ON "PriceRegular" ("price_regular");
+CREATE INDEX "idx_store_items_price_discount" ON "PriceDiscount" ("price_discount");
 CREATE INDEX "idx_store_items_category" ON "Category" ("category");
+CREATE INDEX "idx_store_sale_start" ON "SaleStart" ("sale_start");
+CREATE INDEX "idx_store_sale_end" ON "SaleEnd" ("sale_end");
 ```
 
 ### PantryItems
@@ -173,7 +189,9 @@ PurchaseReports(
 )
 ```
 
-## ChatMessages
+## チャット
+
+### ChatMessages
 
 会話履歴
 
@@ -193,7 +211,7 @@ ChatMessages(
 )
 ```
 
-## ChatRecipes
+### ChatRecipes
 
 ```sql
 ChatRecipes(
