@@ -185,13 +185,33 @@ CREATE TABLE "ChatMessages" (
     -- 説明
     "recipe_description" text,
 
-    -- 食材などの配列
+    -- 食材の配列
     "recipe_materials" text []
 );
 
 CREATE INDEX "idx_chat_messages_user_id" ON "ChatMessages" ("user_id");
 
 -- ChatRecipes
+
+CREATE TABLE "ChatRecipes" (
+    -- レシピ ID（連番）
+    "recipe_id" serial PRIMARY KEY,
+
+    -- ユーザー ID（UserId）
+    "user_id" uuid REFERENCES "Users" ("user_id") ON DELETE SET NULL,
+
+    -- 各会話のID
+    "message_id" uuid REFERENCES "ChatMessages" ("message_id") ON DELETE CASCADE,
+
+    -- レシピタイトル
+    "title" varchar(100),
+
+    -- レシピ説明
+    "description" text
+);
+
+CREATE INDEX "idx_chat_recipes_user_id" ON "ChatRecipes" ("user_id");
+CREATE INDEX "idx_chat_recipes_message_id" ON "ChatRecipes" ("message_id");
 
 -- PurchaseReports
 
