@@ -163,6 +163,34 @@ CREATE INDEX "idx_pantry_items_category" ON "PantryItems" ("category");
 
 -- ChatMessages
 
+-- 会話ロール
+CREATE TYPE role_type_enum AS ENUM ('user', 'assistant');
+
+CREATE TABLE "ChatMessages" (
+    -- 各会話の ID
+    "message_id" uuid PRIMARY KEY,
+
+    -- ユーザー ID（UserId）
+    "user_id" uuid NOT NULL REFERENCES "Users" ("user_id") ON DELETE CASCADE,
+
+    -- 会話のロール
+    "role" role_type_enum NOT NULL,
+
+    -- 会話本文
+    "content" text,
+
+    -- タイトル
+    "recipe_title" varchar(100),
+
+    -- 説明
+    "recipe_description" text,
+
+    -- 食材などの配列
+    "recipe_materials" text []
+);
+
+CREATE INDEX "idx_chat_messages_user_id" ON "ChatMessages" ("user_id");
+
 -- ChatRecipes
 
 -- PurchaseReports

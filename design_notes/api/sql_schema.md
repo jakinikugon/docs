@@ -203,19 +203,33 @@ CREATE INDEX "idx_pantry_items_category" ON "PantryItems" ("category");
 会話履歴
 
 ```sql
-CREATE TYPE role_type_enum AS ENUM('user', 'assistant')
-```
+-- 会話ロール
+CREATE TYPE role_type_enum AS ENUM ('user', 'assistant');
 
-```sql
-ChatMessages(
-  message_id VARCHAR(100) PRIMARY KEY,          -- 各会話のid
-  user_id NOT NULL REFERENCES Users(user_id),   -- ユーザーID（UserId）
-  role role_type_enum NOT NULL,                 -- 会話の役割
-  content VARCHAR(100),
-  title VARCHAR(100),
-  description VARCHAR(100),
-  materials TEXT[]
-)
+CREATE TABLE "ChatMessages" (
+    -- 各会話の ID
+    "message_id" uuid PRIMARY KEY,
+
+    -- ユーザー ID（UserId）
+    "user_id" uuid NOT NULL REFERENCES "Users" ("user_id") ON DELETE CASCADE,
+
+    -- 会話のロール
+    "role" role_type_enum NOT NULL,
+
+    -- 会話本文
+    "content" text,
+
+    -- タイトル
+    "recipe_title" varchar(100),
+
+    -- 説明
+    "recipe_description" text,
+
+    -- 食材の配列
+    "recipe_materials" text []
+);
+
+CREATE INDEX "idx_chat_messages_user_id" ON "ChatMessages" ("user_id");
 ```
 
 ### ChatRecipes
