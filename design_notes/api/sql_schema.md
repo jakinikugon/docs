@@ -3,11 +3,12 @@
 - PostgreSQL を想定
   - 文字列リテラル: '文字列'
   - テーブル名・列名などの識別子: "識別子"
+- api/detail.md に従う
 
 ## Users
 
 全ユーザーの一覧（buyerとstore）
-
+- api/detail.md に従う
 ```sql
 CREATE TYPE account_type_enum AS ENUM('buyer', 'store')
 ```
