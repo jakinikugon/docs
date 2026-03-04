@@ -4,26 +4,25 @@
   - 文字列リテラル: '文字列'
   - テーブル名・列名などの識別子: "識別子"
 - api/detail.md に従う
+- 主キー: PK, Primary Key
+- 外部キー: FK, Foreign Key
 
 ## Users
 
 全ユーザーの一覧（buyer と store）
 
 ```sql
-CREATE TYPE account_type_enum AS ENUM (
-    'buyer',
-    'store'
-);
+CREATE TYPE account_type_enum AS ENUM ('buyer', 'store');
 ```
 
 ```sql
 CREATE TABLE "Users" (
-    "user_id" uuid PRIMARY KEY DEFAULT gen_random_uuid (), -- ユーザーID（UserId）
+    "user_id" uuid PRIMARY KEY DEFAULT gen_random_uuid(), -- ユーザーID（UserId）
     "email" varchar(100) NOT NULL UNIQUE, -- メールアドレス（Email）
     "account_type" account_type_enum NOT NULL, -- アカウントの種別（buyer か store）
-    "created_at" timestamp NOT NULL DEFAULT NOW(),
-    "updated_at" timestamp NOT NULL DEFAULT NOW()
-);
+    "created_at" timestamp NOT NULL DEFAULT now(),
+    "updated_at" timestamp NOT NULL DEFAULT now()
+)
 ```
 
 ### UsersCredentials
