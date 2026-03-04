@@ -7,19 +7,22 @@
 
 ## Users
 
-全ユーザーの一覧（buyerとstore）
-- api/detail.md に従う
+全ユーザーの一覧（buyer と store）
+
 ```sql
-CREATE TYPE account_type_enum AS ENUM('buyer', 'store')
+CREATE TYPE account_type_enum AS ENUM (
+    'buyer',
+    'store'
+);
 ```
 
 ```sql
-Users(
-  user_id PRIMARY KEY,                      -- ユーザーID（UserId）
-  email VARCHAR(100) NOT NULL,              -- メールアドレス（Email）
-  account_type account_type_enum NOT NULL,  -- アカウントの種別（buyer か store）
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+CREATE TABLE "Users" (
+    "user_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- ユーザーID（UserId）
+    "email" VARCHAR(100) NOT NULL UNIQUE, -- メールアドレス（Email）
+    "account_type" account_type_enum NOT NULL, -- アカウントの種別（buyer か store）
+    "created_at" timestamp NOT NULL DEFAULT NOW(),
+    "updated_at" timestamp NOT NULL DEFAULT NOW()
 );
 ```
 
