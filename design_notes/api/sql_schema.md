@@ -18,8 +18,8 @@ CREATE TYPE account_type_enum AS ENUM (
 
 ```sql
 CREATE TABLE "Users" (
-    "user_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- ユーザーID（UserId）
-    "email" VARCHAR(100) NOT NULL UNIQUE, -- メールアドレス（Email）
+    "user_id" uuid PRIMARY KEY DEFAULT gen_random_uuid (), -- ユーザーID（UserId）
+    "email" varchar(100) NOT NULL UNIQUE, -- メールアドレス（Email）
     "account_type" account_type_enum NOT NULL, -- アカウントの種別（buyer か store）
     "created_at" timestamp NOT NULL DEFAULT NOW(),
     "updated_at" timestamp NOT NULL DEFAULT NOW()
