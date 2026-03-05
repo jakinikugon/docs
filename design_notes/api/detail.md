@@ -666,6 +666,7 @@ type BuyersMeChatMessagesPostResponse = Chat;
 #### GET `/api/buyers/me/chat/recipes`
 
 - チャットで提案されたレシピの取得
+- タブ2 を押したら発火する（リクエストを投げる）
 - 関数名：GetBuyersMeChatRecipes
 
 ```ts
