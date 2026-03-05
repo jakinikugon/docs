@@ -248,13 +248,6 @@ CREATE INDEX "idx_store_items_name_trgm"
 ON "store_items" USING gin ("name" gin_trgm_ops);
 CREATE INDEX "idx_store_items_description_trgm"
 ON "store_items" USING gin ("description" gin_trgm_ops);
-
--- 出品物に紐づくアレルギー（出品フォームにある）
-CREATE TABLE "store_item_allergens" (
-    "item_id" uuid NOT NULL REFERENCES "store_items" ("item_id") ON DELETE CASCADE,
-    "allergen" "allergen_enum" NOT NULL,
-    PRIMARY KEY ("item_id", "allergen")
-);
 -- -- --
 
 -- ------------ Pantry ------------ -- 
