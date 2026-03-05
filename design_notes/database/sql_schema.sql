@@ -186,9 +186,10 @@ CREATE TABLE "images" (
     "uploader_user_id" uuid NOT NULL REFERENCES "users" ("user_id") ON DELETE CASCADE,
     "created_at" timestamptz NOT NULL DEFAULT now(),
 
-    CHECK (
-        "image_url" ~* '^https?://.+\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$'
-    )
+    -- http:// または https:// で始まる
+    CHECK ("image_url" ~* '^https?://'),
+    -- 危険な拡張子を拒否
+    CHECK ("image_url" !~* '\.(php|cgi|pl|exe|sh|bash|js|jsp|asp|aspx|dll|bat|svg)(\?|$)')
 );
 
 CREATE INDEX "idx_images_uploader" ON "images" ("uploader_user_id");
