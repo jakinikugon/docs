@@ -15,7 +15,7 @@ type OmitId<T> = Omit<T, "id">;
 // 汎用的な型定義
 type UUID = string; // UUID v4 形式の文字列
 type URL = string; // URL の文字列
-type Timestamp = string; // ISO 8601 形式の日時文字列
+type Timestamp = string; // RFC 3339 形式の日時文字列
 type JanCode = string; // JAN コードの文字列
 type Email = string; // メールアドレスの文字列
 type Password = string; // パスワードの文字列
