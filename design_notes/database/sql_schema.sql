@@ -188,7 +188,7 @@ CREATE TABLE "store_settings" (
 -- また、未使用を含むカテゴリー一覧を利用する場面もあるためテーブルが必須
 -- 検索の category クエリパラメータ時に name から id を逆引きする
 CREATE TABLE "categories" (
-    "category_id" bigserial PRIMARY KEY, -- 連番で、DB 上しか扱わない（JSON で送らない）
+    "category_id" integer PRIMARY KEY, -- 連番で、DB 上しか扱わない（JSON で送らない）
     "name" text NOT NULL UNIQUE -- カテゴリー名
 );
 
@@ -286,7 +286,7 @@ CREATE INDEX "idx_pantry_items_buyer" ON "pantry_items" ("buyer_user_id");
 -- 機能: buyer が itemID を報告し、望むなら addPantry する
 -- 機能: store 側は自店舗の報告された購入履歴を見る
 CREATE TABLE "purchase_reports" (
-    "report_id" bigserial PRIMARY KEY,
+    "report_id" uuid PRIMARY KEY,
     "buyer_user_id" uuid NOT NULL REFERENCES "buyer_users" ("user_id") ON DELETE CASCADE,
     "item_id" uuid NOT NULL REFERENCES "store_items" ("item_id") ON DELETE CASCADE,
     "add_pantry" boolean NOT NULL DEFAULT FALSE,
