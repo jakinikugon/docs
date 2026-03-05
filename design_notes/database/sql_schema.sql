@@ -393,7 +393,7 @@ SELECT
     ss."updated_at",
     coalesce(r."reports_count", 0)::integer AS "reports_count"
 FROM "store_settings" AS ss
-JOIN "user_id" AS u ON u."user_id" = ss."user_id"
+JOIN "users" AS u ON u."user_id" = ss."user_id"
 JOIN "images" AS i ON i."image_id" = ss."icon_image_id"
 LEFT JOIN (
     SELECT
