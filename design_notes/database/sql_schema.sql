@@ -137,6 +137,24 @@ FOR EACH ROW EXECUTE FUNCTION "forbid_account_type_update"();
 -- -- --
 
 
+-- ------------ Images ------------ -- 
+-- /api/upload/image: ImageID と imageUrl を返す
+CREATE TABLE "images" (
+    "image_id" uuid PRIMARY KEY,
+    "image_url" text NOT NULL UNIQUE,
+    "uploader_user_id" uuid NOT NULL REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "created_at" timestamptz NOT NULL DEFAULT now(),
+
+    -- http:// または https:// で始まる
+    CHECK ("image_url" ~* '^https?://'),
+    -- 危険な拡張子を拒否
+    CHECK ("image_url" !~* '\.(php|cgi|pl|exe|sh|bash|js|jsp|asp|aspx|dll|bat|svg)(\?|$)')
+);
+
+CREATE INDEX "idx_images_uploader" ON "images" ("uploader_user_id");
+-- -- --
+
+
 -- ------------ Profiles / Settings ------------ -- 
 -- BuyerSetting 構造体に対応（一部）: buyerName, allergens[], prompt
 -- buyerName は Users テーブルの display_name を用いるためこのテーブルでは定義しない
@@ -175,24 +193,6 @@ CREATE TABLE "categories" (
 );
 
 CREATE INDEX "idx_categories_name_lower" ON "categories" (lower("name"));
--- -- --
-
-
--- ------------ Images ------------ -- 
--- /api/upload/image: ImageID と imageUrl を返す
-CREATE TABLE "images" (
-    "image_id" uuid PRIMARY KEY,
-    "image_url" text NOT NULL UNIQUE,
-    "uploader_user_id" uuid NOT NULL REFERENCES "users" ("user_id") ON DELETE CASCADE,
-    "created_at" timestamptz NOT NULL DEFAULT now(),
-
-    -- http:// または https:// で始まる
-    CHECK ("image_url" ~* '^https?://'),
-    -- 危険な拡張子を拒否
-    CHECK ("image_url" !~* '\.(php|cgi|pl|exe|sh|bash|js|jsp|asp|aspx|dll|bat|svg)(\?|$)')
-);
-
-CREATE INDEX "idx_images_uploader" ON "images" ("uploader_user_id");
 -- -- --
 
 
