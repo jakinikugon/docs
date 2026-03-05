@@ -25,6 +25,7 @@ CREATE TYPE "allergen_enum" AS ENUM (
 CREATE TABLE "users" (
     "user_id" uuid PRIMARY KEY,
     "email" varchar(254) NOT NULL UNIQUE,
+    "display_name" varchar(24) NOT NULL,
     "account_type" "account_type_enum" NOT NULL,
     "created_at" timestamptz NOT NULL DEFAULT now(), -- アカウント作成日時
     "updated_at" timestamptz NOT NULL DEFAULT now() -- アカウント更新日時
@@ -45,7 +46,6 @@ CREATE TABLE "user_credentials" (
 );
 
 -- リフレッシュトークンは refresh 成功時に上書きし、古いのは削除する
--- MVPとして 1ユーザー1トークンに固定（ローテーションで UPDATE）
 -- 有効である十分条件: revoked_at IS NULL AND expires_at > now()
 CREATE TABLE "user_refresh_tokens" (
     "refresh_token_id" uuid PRIMARY KEY, -- このテーブルでの識別用のみ、トークンとは異なる
@@ -75,20 +75,22 @@ CREATE INDEX "idx_user_refresh_tokens_user" ON "user_refresh_tokens" ("user_id")
 
 
 -- ------------ Profiles / Settings ------------ -- 
--- BuyerSetting 構造体に対応: buyerName, allergens[], prompt
+-- BuyerSetting 構造体に対応（一部）: buyerName, allergens[], prompt
 CREATE TABLE "buyer_settings" (
     "user_id" uuid PRIMARY KEY REFERENCES "users" ("user_id") ON DELETE CASCADE,
-    "buyer_name" varchar(60) NOT NULL,
+
+    -- buyerName は Users テーブルの display_name を用いるためこのテーブルでは定義しない
     "allergens" "allergen_enum" [] NOT NULL DEFAULT '{}'::"allergen_enum" [],
     "prompt" text NOT NULL DEFAULT '',
     "created_at" timestamptz NOT NULL DEFAULT now(),
     "updated_at" timestamptz NOT NULL DEFAULT now()
 );
 
--- StoreSetting 構造体に対応: storeName, address, iconUrl, introduction
+-- StoreSetting 構造体に対応（一部）: storeName, address, iconUrl, introduction
 CREATE TABLE "store_settings" (
     "user_id" uuid PRIMARY KEY REFERENCES "users" ("user_id") ON DELETE CASCADE,
-    "store_name" varchar(80) NOT NULL,
+
+    -- storeName は Users テーブルの display_name を用いるためこのテーブルでは定義しない
     "address" text NOT NULL DEFAULT '',
     "icon_url" text NOT NULL DEFAULT '',
     "introduction" text NOT NULL DEFAULT '',
@@ -228,7 +230,7 @@ CREATE TABLE "purchase_reports" (
     "add_pantry" boolean NOT NULL DEFAULT FALSE,
     "reported_at" timestamptz NOT NULL DEFAULT now(),
 
-    -- item 1 つにつき報告は 1 度のみ
+    -- item は数量を持たないので、item 1 つにつき報告は 1 度のみ
     CONSTRAINT "uq_purchase_reports_item" UNIQUE ("item_id")
 );
 
@@ -302,13 +304,16 @@ CREATE INDEX "idx_chat_recipe_materials_recipe" ON "chat_recipe_materials" ("rec
 -- }
 CREATE VIEW "v_store_profile" AS
 SELECT
-    s."user_id" AS "store_id",
-    s."store_name",
-    s."address",
-    s."icon_url",
-    s."introduction",
+    u."user_id" AS "store_id",
+    u."display_name" AS "store_name",
+    ss."address",
+    ss."icon_url",
+    ss."introduction",
+    ss."created_at",
+    ss."updated_at",
     coalesce(r."reports_count", 0)::integer AS "reports_count"
-FROM "store_settings" s
+FROM "users" AS u
+JOIN "store_settings" AS ss ON ss."user_id" = u."user_id"
 LEFT JOIN (
     SELECT
         i."store_user_id" AS "store_user_id",
@@ -316,7 +321,8 @@ LEFT JOIN (
     FROM "purchase_reports" pr
     JOIN "store_items" i ON i."item_id" = pr."item_id"
     GROUP BY i."store_user_id"
-) r ON r."store_user_id" = s."user_id";
+) r ON r."store_user_id" = ss."user_id"
+WHERE u."account_type" = 'store';
 
 -- Buyer Reports summary: totalCount / totalDiscount
 -- GET /api/buyers/me/reports エンドポイントを実装する際に利用する
