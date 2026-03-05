@@ -968,7 +968,7 @@ type StoresDetailsItemsGetResponse = ItemViewForBuyer[];
 - 出品物の検索・一覧の取得
 - クエリパラメータは以下に示す条件を想定
   - `q`: 商品名や説明文に対するキーワード検索
-  - `category`: カテゴリIDでの絞り込み
+  - `category`: カテゴリ名での絞り込み
   - `price_max` / `price_min`: 価格（割引後・売値）の範囲指定
     - 検索条件に通常価格は扱わないのでこの命名で OK
   - `sort`: 並び替えの指定（"price-low" or "price-high"）
