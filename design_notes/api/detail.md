@@ -968,6 +968,7 @@ type StoresDetailsItemsGetResponse = ItemViewForBuyer[];
 #### GET `/api/items?{query}`
 
 - 出品物の検索・一覧の取得
+  - 冷蔵庫の検索ではない、冷蔵庫の検索は実装しない
 - クエリパラメータは以下に示す条件を想定
   - `q`: 商品名や説明文に対するキーワード検索
   - `category`: カテゴリ名での絞り込み
@@ -1041,6 +1042,7 @@ type ItemsDetailsGetResponse = ItemDetailForBuyer;
 - 冷蔵庫食材名の補完候補の取得
 - クエリパラメータは `q` を想定(例: `q=牛` など)
 - レスポンスは以下のような形式
+- DB 向け情報: categories で検索する
 - 関数名：GetPantrySuggestionsQuery
 
 ```ts
@@ -1098,6 +1100,7 @@ type JanGetResponse = {
 
 - 画像のアップロード
 - リクエストは multipart/form-data で画像ファイルを送信
+- 拡張子: jpg|jpeg|png|gif|webp|bmp|svg
 - 関数名：PostUploadImage
 
 ```ts

@@ -139,10 +139,11 @@ FOR EACH ROW EXECUTE FUNCTION "forbid_account_type_update"();
 
 -- ------------ Profiles / Settings ------------ -- 
 -- BuyerSetting 構造体に対応（一部）: buyerName, allergens[], prompt
+-- buyerName は Users テーブルの display_name を用いるためこのテーブルでは定義しない
+-- iconUrl は images テーブルの image_url を用いるためこのテーブルでは定義しない
 CREATE TABLE "buyer_settings" (
     "user_id" uuid PRIMARY KEY REFERENCES "buyer_users" ("user_id") ON DELETE CASCADE,
-
-    -- buyerName は Users テーブルの display_name を用いるためこのテーブルでは定義しない
+    "icon_image_id" uuid NULL REFERENCES "images" ("image_id") ON DELETE RESTRICT,
     "allergens" "allergen_enum" [] NOT NULL DEFAULT '{}'::"allergen_enum" [],
     "prompt" text NOT NULL DEFAULT '',
     "created_at" timestamptz NOT NULL DEFAULT now(),
@@ -150,12 +151,12 @@ CREATE TABLE "buyer_settings" (
 );
 
 -- StoreSetting 構造体に対応（一部）: storeName, address, iconUrl, introduction
+-- storeName は Users テーブルの display_name を用いるためこのテーブルでは定義しない
+-- iconUrl は images テーブルの image_url を用いるためこのテーブルでは定義しない
 CREATE TABLE "store_settings" (
     "user_id" uuid PRIMARY KEY REFERENCES "store_users" ("user_id") ON DELETE CASCADE,
-
-    -- storeName は Users テーブルの display_name を用いるためこのテーブルでは定義しない
     "address" text NOT NULL DEFAULT '',
-    "icon_url" text NOT NULL DEFAULT '',
+    "icon_image_id" uuid NULL REFERENCES "images" ("image_id") ON DELETE RESTRICT,
     "introduction" text NOT NULL DEFAULT '',
     "created_at" timestamptz NOT NULL DEFAULT now(),
     "updated_at" timestamptz NOT NULL DEFAULT now()
@@ -181,9 +182,13 @@ CREATE INDEX "idx_categories_name_lower" ON "categories" (lower("name"));
 -- /api/upload/image: ImageID と imageUrl を返す
 CREATE TABLE "images" (
     "image_id" uuid PRIMARY KEY,
-    "image_url" text NOT NULL,
+    "image_url" text NOT NULL UNIQUE,
     "uploader_user_id" uuid NOT NULL REFERENCES "users" ("user_id") ON DELETE CASCADE,
-    "created_at" timestamptz NOT NULL DEFAULT now()
+    "created_at" timestamptz NOT NULL DEFAULT now(),
+
+    CHECK (
+        "image_url" ~* '^https?://.+\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$'
+    )
 );
 
 CREATE INDEX "idx_images_uploader" ON "images" ("uploader_user_id");
@@ -201,7 +206,7 @@ CREATE TABLE "store_items" (
     "name" varchar(120) NOT NULL, -- 商品名は検索（q クエリパラメータ）でも使う
     "description" text NOT NULL DEFAULT '', -- 説明文は検索（q クエリパラメータ）でも使う
 
-    "image_url" text NOT NULL DEFAULT '',
+    "image_id" uuid NULL REFERENCES "images" ("image_id") ON DELETE RESTRICT,
 
     "price_regular" integer NOT NULL CHECK ("price_regular" >= 0), -- 検索には使わない
     "price_discount" integer NOT NULL CHECK ("price_discount" >= 0), -- 検索・並びに使う
@@ -244,7 +249,7 @@ ON "store_items" ("sale_end")
 WHERE "hidden" = FALSE;
 
 -- q クエリパラメータによる部分一致検索を実装するための索引
-CREATE EXTENSION IF NOT EXISTS pg_trgm; -- pg_trgm（トライグラム） と GIN/GiST を利用する
+CREATE EXTENSION IF NOT EXISTS pg_trgm; -- pg_trgm（トライグラム trigram） と GIN/GiST
 CREATE INDEX "idx_store_items_name_trgm"
 ON "store_items" USING gin ("name" gin_trgm_ops);
 CREATE INDEX "idx_store_items_description_trgm"
@@ -381,13 +386,14 @@ SELECT
     u."user_id" AS "store_id",
     u."display_name" AS "store_name",
     ss."address",
-    ss."icon_url",
+    i."image_url" AS "icon_url",
     ss."introduction",
     ss."created_at",
     ss."updated_at",
     coalesce(r."reports_count", 0)::integer AS "reports_count"
-FROM "users" AS u
-JOIN "store_settings" AS ss ON ss."user_id" = u."user_id"
+FROM "store_settings" AS ss
+JOIN "user_id" AS u ON u."user_id" = ss."user_id"
+JOIN "images" AS i ON i."image_id" = ss."icon_image_id"
 LEFT JOIN (
     SELECT
         i."store_user_id" AS "store_user_id",
@@ -397,6 +403,14 @@ LEFT JOIN (
     GROUP BY i."store_user_id"
 ) r ON r."store_user_id" = ss."user_id"
 WHERE u."account_type" = 'store';
+
+-- items の画像返却用の VIEW
+CREATE VIEW "v_store_items_with_image" AS
+SELECT
+    it.*,
+    img."image_url"
+FROM "store_items" it
+LEFT JOIN "images" img ON img."image_id" = it."image_id";
 
 -- Buyer Reports summary: totalCount / totalDiscount
 -- GET /api/buyers/me/reports エンドポイントを実装する際に利用する
