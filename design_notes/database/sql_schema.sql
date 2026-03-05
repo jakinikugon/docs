@@ -219,7 +219,7 @@ CREATE TABLE "store_items" (
 
     -- 販売の日時
     "sale_start" timestamptz NOT NULL,
-    "sale_end" timestamptz NOT NULL,
+    "sale_end" timestamptz NOT NULL, -- これを現在日時が超過した場合は表示期限切れ
 
     -- 消費/賞味期限
     "limit_date" timestamptz NOT NULL,
