@@ -405,14 +405,6 @@ LEFT JOIN (
     GROUP BY i."store_user_id"
 ) r ON r."store_user_id" = ss."user_id";
 
--- items の画像返却用の VIEW
-CREATE VIEW "v_store_items_with_image" AS
-SELECT
-    it.*,
-    img."image_url"
-FROM "store_items" it
-LEFT JOIN "images" img ON img."image_id" = it."image_id";
-
 -- Buyer Reports summary: totalCount / totalDiscount
 -- GET /api/buyers/me/reports エンドポイントを実装する際に利用する
 -- {
@@ -428,4 +420,39 @@ SELECT
 FROM "purchase_reports" pr
 JOIN "store_items" i ON i."item_id" = pr."item_id"
 GROUP BY pr."buyer_user_id";
+
+-- items の画像返却用の VIEW
+CREATE VIEW "v_store_items_with_image" AS
+SELECT
+    it.*,
+    img."image_url"
+FROM "store_items" it
+LEFT JOIN "images" img ON img."image_id" = it."image_id";
+
+-- buyer_user_id で明細一覧（items）を返す
+-- :buyer_user_id はプレースホルダ（実際は $1 などに置き換え）
+CREATE VIEW v_buyer_reports_items AS
+SELECT
+    pr."buyer_user_id",
+    pr."report_id",
+    pr."reported_at" AS "date",
+
+    pr."item_id",
+    si."store_user_id",
+    si."name",
+    si."description",
+
+    i."image_url" AS "image_url",
+
+    si."price_regular",
+    si."price_discount",
+    si."sale_start",
+    si."sale_end",
+    si."limit_date",
+    si."hidden"
+FROM "purchase_reports" pr
+JOIN "store_items" si
+    ON si."item_id" = pr."item_id"
+LEFT JOIN "images" i
+    ON i."image_id" = si."image_id";
 -- -- --
