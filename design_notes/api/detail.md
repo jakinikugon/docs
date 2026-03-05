@@ -514,6 +514,8 @@ type BuyersMeReportsGetResponse = Reports;
 - 購入報告の作成
 - 関数名：PostBuyersMeReports
 - レスポンスは作成された商品 ID と報告日時
+- チラシ 1 枚 = 商品 1 つ
+- 1 チラシにつき報告できるのは 1 度のみ
 
 ```ts
 type BuyersMeReportsPostRequest = {
