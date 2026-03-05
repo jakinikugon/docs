@@ -394,7 +394,8 @@ SELECT
     coalesce(r."reports_count", 0)::integer AS "reports_count"
 FROM "store_settings" AS ss
 JOIN "users" AS u ON u."user_id" = ss."user_id"
-JOIN "images" AS i ON i."image_id" = ss."icon_image_id"
+-- LEFT つけないと NULL 許容できない
+LEFT JOIN "images" AS i ON i."image_id" = ss."icon_image_id"
 LEFT JOIN (
     SELECT
         i."store_user_id" AS "store_user_id",
@@ -402,8 +403,7 @@ LEFT JOIN (
     FROM "purchase_reports" pr
     JOIN "store_items" i ON i."item_id" = pr."item_id"
     GROUP BY i."store_user_id"
-) r ON r."store_user_id" = ss."user_id"
-WHERE u."account_type" = 'store';
+) r ON r."store_user_id" = ss."user_id";
 
 -- items の画像返却用の VIEW
 CREATE VIEW "v_store_items_with_image" AS
