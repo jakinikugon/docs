@@ -1100,6 +1100,7 @@ type JanGetResponse = {
 
 - 画像のアップロード
 - リクエストは multipart/form-data で画像ファイルを送信
+  -- 配信は認可不要の public で行われるので API は用意しない（URL で直アクセス）
 - 拡張子: jpg|jpeg|png|gif|webp|bmp|heif|heic
 - 関数名：PostUploadImage
 
