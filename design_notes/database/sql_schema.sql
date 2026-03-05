@@ -39,13 +39,14 @@ CREATE INDEX "idx_users_account_type" ON "users" ("account_type");
 
 -- ユーザーのクレデンシャル
 CREATE TABLE "user_credentials" (
-    "user_id" uuid NOT NULL REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "user_id" uuid PRIMARY KEY REFERENCES "users" ("user_id") ON DELETE CASCADE,
     "password_hash" text NOT NULL, -- パスワードはハッシュのみ保存
     "created_at" timestamptz NOT NULL DEFAULT now(), -- パスワード作成日時
     "updated_at" timestamptz NOT NULL DEFAULT now()
 );
 
 -- リフレッシュトークンは refresh 成功時に上書きし、古いのは削除する
+-- 1 ユーザー複数リフレッシュトークンも想定する
 -- 有効である十分条件: revoked_at IS NULL AND expires_at > now()
 CREATE TABLE "user_refresh_tokens" (
     "refresh_token_id" uuid PRIMARY KEY, -- このテーブルでの識別用のみ、トークンとは異なる
@@ -74,10 +75,72 @@ CREATE INDEX "idx_user_refresh_tokens_user" ON "user_refresh_tokens" ("user_id")
 -- -- --
 
 
+-- ------------ Subtype tables (buyer / store) ------------ --
+-- users.account_type を DB レベルで強制するための派生テーブル
+-- users を親に子テーブルを作成してるみたいな
+CREATE TABLE "buyer_users" (
+    "user_id" uuid PRIMARY KEY
+    REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "created_at" timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE "store_users" (
+    "user_id" uuid PRIMARY KEY
+    REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "created_at" timestamptz NOT NULL DEFAULT now()
+);
+
+-- account_type 整合チェック（子テーブル INSERT/UPDATE 時に検証）
+CREATE OR REPLACE FUNCTION "ensure_user_is_buyer"()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE t "account_type_enum";
+BEGIN
+  SELECT "account_type" INTO t FROM "users" WHERE "user_id" = NEW."user_id";
+  IF t IS DISTINCT FROM 'buyer' THEN
+    RAISE EXCEPTION 'user % is not buyer (account_type=%)', NEW."user_id", t;
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER "trg_buyer_users_account_type"
+BEFORE INSERT OR UPDATE ON "buyer_users"
+FOR EACH ROW EXECUTE FUNCTION "ensure_user_is_buyer"();
+
+CREATE OR REPLACE FUNCTION "ensure_user_is_store"()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE t "account_type_enum";
+BEGIN
+  SELECT "account_type" INTO t FROM "users" WHERE "user_id" = NEW."user_id";
+  IF t IS DISTINCT FROM 'store' THEN
+    RAISE EXCEPTION 'user % is not store (account_type=%)', NEW."user_id", t;
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER "trg_store_users_account_type"
+BEFORE INSERT OR UPDATE ON "store_users"
+FOR EACH ROW EXECUTE FUNCTION "ensure_user_is_store"();
+
+-- account_type を変えられないようにする制約
+CREATE OR REPLACE FUNCTION "forbid_account_type_update"()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW."account_type" IS DISTINCT FROM OLD."account_type" THEN
+    RAISE EXCEPTION 'account_type is immutable';
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER "trg_users_account_type_immutable"
+BEFORE UPDATE ON "users"
+FOR EACH ROW EXECUTE FUNCTION "forbid_account_type_update"();
+-- -- --
+
+
 -- ------------ Profiles / Settings ------------ -- 
 -- BuyerSetting 構造体に対応（一部）: buyerName, allergens[], prompt
 CREATE TABLE "buyer_settings" (
-    "user_id" uuid PRIMARY KEY REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "user_id" uuid PRIMARY KEY REFERENCES "buyer_users" ("user_id") ON DELETE CASCADE,
 
     -- buyerName は Users テーブルの display_name を用いるためこのテーブルでは定義しない
     "allergens" "allergen_enum" [] NOT NULL DEFAULT '{}'::"allergen_enum" [],
@@ -88,7 +151,7 @@ CREATE TABLE "buyer_settings" (
 
 -- StoreSetting 構造体に対応（一部）: storeName, address, iconUrl, introduction
 CREATE TABLE "store_settings" (
-    "user_id" uuid PRIMARY KEY REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "user_id" uuid PRIMARY KEY REFERENCES "store_users" ("user_id") ON DELETE CASCADE,
 
     -- storeName は Users テーブルの display_name を用いるためこのテーブルでは定義しない
     "address" text NOT NULL DEFAULT '',
@@ -133,7 +196,7 @@ CREATE INDEX "idx_images_uploader" ON "images" ("uploader_user_id");
 -- 価格、JAN、アレルギー等
 CREATE TABLE "store_items" (
     "item_id" uuid PRIMARY KEY,
-    "store_user_id" uuid NOT NULL REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "store_user_id" uuid NOT NULL REFERENCES "store_users" ("user_id") ON DELETE CASCADE,
 
     "name" varchar(120) NOT NULL, -- 商品名は検索（q クエリパラメータ）でも使う
     "description" text NOT NULL DEFAULT '', -- 説明文は検索（q クエリパラメータ）でも使う
@@ -199,8 +262,7 @@ CREATE TABLE "store_item_allergens" (
 -- category は UI/検索都合で categories に寄せる（NULLも許容）
 CREATE TABLE "pantry_items" (
     "pantry_item_id" uuid PRIMARY KEY,
-    "buyer_user_id" uuid NOT NULL
-    REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "buyer_user_id" uuid NOT NULL REFERENCES "buyer_users" ("user_id") ON DELETE CASCADE,
 
     "name" varchar(120) NOT NULL, -- 冷蔵庫の中にあるアイテムの名前
     "jan_code" varchar(14),
@@ -225,7 +287,7 @@ CREATE INDEX "idx_pantry_items_buyer" ON "pantry_items" ("buyer_user_id");
 -- 機能: store 側は自店舗の報告された購入履歴を見る
 CREATE TABLE "purchase_reports" (
     "report_id" bigserial PRIMARY KEY,
-    "buyer_user_id" uuid NOT NULL REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "buyer_user_id" uuid NOT NULL REFERENCES "buyer_users" ("user_id") ON DELETE CASCADE,
     "item_id" uuid NOT NULL REFERENCES "store_items" ("item_id") ON DELETE CASCADE,
     "add_pantry" boolean NOT NULL DEFAULT FALSE,
     "reported_at" timestamptz NOT NULL DEFAULT now(),
@@ -244,7 +306,7 @@ CREATE INDEX "idx_purchase_reports_item" ON "purchase_reports" ("item_id");
 -- buyer_user_id をチャットセッション管理の ID として利用することで履歴として成立する
 CREATE TABLE "chat_messages" (
     "message_id" uuid PRIMARY KEY,
-    "buyer_user_id" uuid NOT NULL REFERENCES "users" ("user_id") ON DELETE CASCADE,
+    "buyer_user_id" uuid NOT NULL REFERENCES "buyer_users" ("user_id") ON DELETE CASCADE,
     "role" "role_enum" NOT NULL,
     "content" text NOT NULL DEFAULT '',
     "created_at" timestamptz NOT NULL DEFAULT now()
