@@ -347,6 +347,24 @@ CREATE TABLE "chat_recipe_materials" (
 CREATE INDEX "idx_chat_recipe_materials_recipe" ON "chat_recipe_materials" ("recipe_id");
 -- -- --
 
+-- ------------ jan code ------------ -- 
+-- GET /api/jan/{jan_code} エンドポイントに対応
+CREATE TABLE "jan_products" (
+    "jan_code" text PRIMARY KEY,
+    "name" text NOT NULL,
+
+    -- アプリ内カテゴリに寄せる（Go 側で Yahoo -> category_id へ変換して入れる）
+    "category_id" integer NOT NULL REFERENCES "categories" ("category_id")
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+
+    "created_at" timestamptz NOT NULL DEFAULT now(),
+
+    CONSTRAINT "chk_jan_products_digits" CHECK (
+        "jan_code" IS NULL OR "jan_code" ~ '^[0-9]{8,14}$'
+    )
+);
+-- -- --
+
 -- ------------ Views ------------ -- 
 -- StoreProfile: reportsCount を返す（集計で算出）
 -- GET /api/stores/{storeId} エンドポイントを実装する際に利用する
