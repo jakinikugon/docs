@@ -169,7 +169,7 @@ CREATE TABLE "store_settings" (
 -- また、未使用を含むカテゴリー一覧を利用する場面もあるためテーブルが必須
 -- 検索の category クエリパラメータ時に name から id を逆引きする
 CREATE TABLE "categories" (
-    "category_id" bigserial PRIMARY KEY, -- 連番
+    "category_id" bigserial PRIMARY KEY, -- 連番で、DB 上しか扱わない（JSON で送らない）
     "name" text NOT NULL UNIQUE -- カテゴリー名
 );
 
@@ -229,7 +229,8 @@ CREATE TABLE "store_items" (
     CONSTRAINT "chk_sale_range" CHECK ("sale_start" <= "sale_end"),
     CONSTRAINT "chk_jan_digits" CHECK (
         "jan_code" IS NULL OR "jan_code" ~ '^[0-9]{8,14}$'
-    )
+    ),
+    CONSTRAINT "chk_price_range" CHECK (price_discount <= price_regular)
 );
 
 CREATE INDEX "idx_store_items_store" ON "store_items" ("store_user_id");
@@ -270,7 +271,7 @@ CREATE TABLE "pantry_items" (
 
 -- あるユーザーで、同一食品名 (name) が重複する場合は何もしない（エラーではない）
 CREATE UNIQUE INDEX "uq_pantry_items_buyer_name"
-ON "pantry_items" ("buyer_user_id", "name");
+ON "pantry_items" ("buyer_user_id", lower("name"));
 
 CREATE INDEX "idx_pantry_items_buyer" ON "pantry_items" ("buyer_user_id");
 -- -- --
