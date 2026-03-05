@@ -1044,7 +1044,7 @@ type ItemsDetailsGetResponse = ItemDetailForBuyer;
 - 冷蔵庫食材名の補完候補の取得
 - クエリパラメータは `q` を想定(例: `q=牛` など)
 - レスポンスは以下のような形式
-- DB 向け情報: categories で検索する
+- DB 向け情報: `pantry_suggestion_terms`で検索する
 - 関数名：GetPantrySuggestionsQuery
 
 ```ts

@@ -207,7 +207,8 @@ CREATE TABLE "store_items" (
     "name" varchar(120) NOT NULL, -- 商品名は検索（q クエリパラメータ）でも使う
     "description" text NOT NULL DEFAULT '', -- 説明文は検索（q クエリパラメータ）でも使う
 
-    "image_id" uuid NULL REFERENCES "images" ("image_id") ON DELETE RESTRICT,
+    -- プロフィールとは違って NULL は認めない
+    "image_id" uuid NOT NULL REFERENCES "images" ("image_id") ON DELETE RESTRICT,
 
     "price_regular" integer NOT NULL CHECK ("price_regular" >= 0), -- 検索には使わない
     "price_discount" integer NOT NULL CHECK ("price_discount" >= 0), -- 検索・並びに使う
@@ -281,6 +282,44 @@ ON "pantry_items" ("buyer_user_id", lower("name"));
 
 CREATE INDEX "idx_pantry_items_buyer" ON "pantry_items" ("buyer_user_id");
 -- -- --
+
+-- ------------ Pantry suggestion terms ------------ --
+-- /api/pantry/suggestions?q=... の候補語彙
+-- 先頭一致で高速検索するためのテーブル
+CREATE TABLE "pantry_suggestion_terms" (
+    "term_id" bigserial PRIMARY KEY,
+
+    -- 表示する候補（例: "牛乳", "卵", "鶏むね肉"）
+    "term" text NOT NULL,
+
+    -- 検索用（大小文字差異/表記揺れ対策の最小実装）
+    "term_norm" text GENERATED ALWAYS AS (lower(btrim("term"))) STORED,
+
+    -- 並び順のための簡易スコア（使われるほど増やす想定）
+    "usage_count" integer NOT NULL DEFAULT 0,
+
+    -- いつ使われたか（最近のものを優先）
+    "last_used_at" timestamptz,
+
+    "created_at" timestamptz NOT NULL DEFAULT now(),
+    "updated_at" timestamptz NOT NULL DEFAULT now(),
+
+    CONSTRAINT "uq_pantry_suggestion_terms_term_norm" UNIQUE ("term_norm"),
+    CONSTRAINT "ck_pantry_suggestion_terms_term_nonempty" CHECK (
+        length(btrim("term")) > 0
+    )
+);
+
+-- prefix検索を高速化（term_norm LIKE 'xxx%' を想定）
+-- text_pattern_ops は LIKE 'prefix%' に効く。term_norm が text なので利用可。
+CREATE INDEX "idx_pantry_suggestion_terms_term_norm_prefix"
+ON "pantry_suggestion_terms" ("term_norm" text_pattern_ops);
+
+-- 利用頻度/最近で並び替える場合の補助索引
+CREATE INDEX "idx_pantry_suggestion_terms_rank"
+ON "pantry_suggestion_terms" ("usage_count" DESC, "last_used_at" DESC);
+-- -- --
+
 
 -- ------------ Purchase Reports ------------ -- 
 -- 機能: buyer が itemID を報告し、望むなら addPantry する
