@@ -1073,6 +1073,10 @@ type CategoriesGetResponse = ItemCategory[];
 
 - JANコードから商品情報の取得
 - 関数名：GetJan
+- バックエンド向け情報
+  - 1. DB を調べる、なければ 2. へ
+  - 2. 外部 API を叩く、なければ 3. へ
+  - 3. 404 No Content （ボディーは無し）を返す
 
 ```ts
 type JanGetResponse = {
